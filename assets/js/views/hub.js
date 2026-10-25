@@ -210,26 +210,25 @@
   }
 
   // ---------------------------------------------------------------- TIMELINE
-  function tlCols() {
-    const c = S.prefs.columns; const cols = [{ k: 'name', w: 250, label: S.groupLabel(S.prefs.groupBy) }];
-    if (c.sender) cols.push({ k: 'sender', w: 112, label: 'Sender' });
-    if (c.recipient) cols.push({ k: 'recipient', w: 112, label: 'Recipient' });
-    if (c.building) cols.push({ k: 'building', w: 70, label: 'Building' });
-    if (c.floor) cols.push({ k: 'floor', w: 60, label: 'Floor' });
-    return cols;
+  const TL_LEFT = 372; // left column of the timeline: 360–380px, the rest is for the bars
+  function infoLine(o) {
+    const c = S.prefs.columns; const parts = [];
+    if (c.sender || c.recipient) parts.push([c.sender && o.sender, c.recipient && o.recipient].filter(Boolean).join(' → '));
+    if (c.building || c.floor) parts.push([c.building && o.building, c.floor && o.floor].filter(Boolean).join(' · '));
+    return parts.filter(Boolean).join('  ·  ');
   }
   function timelineHtml(groups) {
     const P = S.prefs; const q = P.search;
     const days = P.period * 7; const start = P.rangeStart; const end = D.add(start, days - 1);
-    const cols = tlCols(); const leftW = cols.reduce((a, c) => a + c.w, 0);
-    const colT = cols.map((c) => c.w + 'px').join(' ');
+    const leftW = TL_LEFT; let nRows = 1;
+    const c0 = P.columns; const infoLabel = [(c0.sender || c0.recipient) && [c0.sender && 'Sender', c0.recipient && 'Recipient'].filter(Boolean).join(' → '), (c0.building || c0.floor) && [c0.building && 'Building', c0.floor && 'Floor'].filter(Boolean).join(' · ')].filter(Boolean).join('  ·  ');
     const pct = (d) => (D.diff(d, start) / days) * 100;
     const dayArr = Array.from({ length: days }, (_, i) => D.add(start, i));
     const bg = `<div class="tl-bgcols" style="grid-template-columns:repeat(${days},1fr)">${dayArr.map((d) => `<div class="${d === D.today ? 'td' : D.dow(d) > 4 ? 'we' : ''}"></div>`).join('')}</div>`;
     const weeks = []; for (let i = 0; i < days; i += 7) { const d = D.add(start, i); const e = D.add(d, 6); weeks.push(`<div>W${D.week(d)}, ${D.monthName(d, true)}${D.monthName(e, true) !== D.monthName(d, true) ? '–' + D.monthName(e, true) : ''} ${d.slice(0, 4)}</div>`); }
     const dayW = days > 35 ? 'narrow' : '';
     const head = `
-      <div class="tl-corner" style="height:61px"><div class="tl-cols" style="grid-template-columns:${colT}">${cols.map((c) => `<div>${c.label}</div>`).join('')}</div></div>
+      <div class="tl-corner" style="height:61px"><div class="tl-colhead"><b>${S.groupLabel(P.groupBy)}</b>${infoLabel ? `<span>${infoLabel}</span>` : ''}</div></div>
       <div class="tl-hd"><div class="tl-weeks" style="grid-template-columns:repeat(${P.period},1fr)">${weeks.join('')}</div>
       <div class="tl-days" style="grid-template-columns:repeat(${days},1fr)">${dayArr.map((d) => `<div class="${d === D.today ? 'td' : D.dow(d) > 4 ? 'we' : ''}" ${d === D.today ? 'data-tip="Today"' : `data-tip="${D.dayName(d, true)}, ${D.fmt(d)}"`}>${days > 35 && D.dow(d) % 2 ? '' : +d.slice(8)}</div>`).join('')}</div></div>`;
 
@@ -249,10 +248,13 @@
         span = `<div class="tl-span" style="${before ? 'left:4px' : 'right:4px'};background:var(--subtle);color:var(--t2)" data-jump="${before ? g.to : g.from}" data-tip="Jump to ${before ? 'end' : 'start'}">${before ? '‹ ended ' + D.fmtShort(g.to) : 'starts ' + D.fmtShort(g.from) + ' ›'}</div>`;
       }
       const ticks = list.filter((s) => D.diff(s.date, start) >= 0 && D.diff(s.date, end) <= 0).map((s) => `<i class="tl-tick" style="left:${pct(s.date) + 50 / days}%;background:${SHIPMENT_STATUS[s.status].color}"></i>`).join('');
+      const info = infoLine(vals); nRows++;
       rows += `<div class="tl-row" data-row>
-        <div class="tl-lcell g tl-left" data-group="${esc(g.key)}" style="grid-template-columns:${colT}">
-          <div class="first"><button class="caret ${open ? 'open' : ''}" data-toggle="${esc(key)}" aria-expanded="${!!open}" data-tip="${open ? 'Hide' : 'Show'} shipments">${ms('chevron_right')}</button>${g.wp ? `<span class="dot-s" style="background:${tradeColor(g.trade)}"></span>` : ''}<span class="ell" data-tip="${esc(g.title)}">${hl(g.title, q)}</span><span class="count" style="margin-left:auto">${list.length}</span></div>
-          ${cols.slice(1).map((c) => `<div data-tip="${esc(vals[c.k])}">${hl(vals[c.k], q)}</div>`).join('')}
+        <div class="tl-lcell g tl-left" data-group="${esc(g.key)}">
+          <button class="caret ${open ? 'open' : ''}" data-toggle="${esc(key)}" aria-expanded="${!!open}" data-tip="${open ? 'Hide' : 'Show'} shipments">${ms('chevron_right')}</button>
+          ${g.wp ? `<span class="dot-s" style="background:${tradeColor(g.trade)}"></span>` : ''}
+          <div class="tt"><div class="t1" data-tip="${esc(g.title)}">${hl(g.title, q)}</div>${info ? `<div class="t2">${hl(info, q)}</div>` : ''}</div>
+          <span class="count">${list.length}</span>
         </div>
         <div class="tl-rcell" data-group-r="${esc(g.key)}">${bg}${span}${ticks}</div></div>`;
       if (open) {
@@ -261,19 +263,21 @@
         const near = (x) => Math.abs(D.diff(x.date, D.today)) - (D.diff(x.date, D.today) >= 0 ? 0.5 : 0);
         const ordered = inRange.slice().sort((a, b) => near(a) - near(b)).concat(list.filter((s) => !inRange.includes(s)));
         const shown = all ? list : ordered.slice(0, MAX).sort((a, b) => a.date.localeCompare(b.date));
-        if (!list.length) rows += `<div class="tl-row"><div class="tl-lcell s tl-left" style="grid-template-columns:${colT}"><div class="first cap">No shipments yet</div></div><div class="tl-rcell s">${bg}</div></div>`;
+        if (!list.length) { nRows++; rows += `<div class="tl-row"><div class="tl-lcell s tl-left"><div class="tt cap">No shipments yet</div></div><div class="tl-rcell s">${bg}</div></div>`; }
         shown.forEach((s) => {
           const st = SHIPMENT_STATUS[s.status]; const inR = D.diff(s.date, start) >= 0 && D.diff(s.date, end) <= 0;
           const bar = inR ? `<div class="tl-ship" data-ship="${s.id}" style="left:calc(${pct(s.date)}% + 2px);width:calc(${100 / days}% - 4px);background:${st.color};color:${isDark(st.color) ? 'rgba(0,0,0,.78)' : '#fff'}" data-tip="<b>${esc(s.name)}</b><br>${s.no} · ${s.status}<br>${D.dayName(s.date)}, ${D.fmt(s.date)} · ${s.start}–${s.end}<br>${esc(S.vehicle(s.vehicle).name)} · ${s.up}">${ci(st.icon, 14)}${days <= 14 ? s.start : ''}</div>`
             : `<div class="tl-span" style="${D.diff(s.date, start) < 0 ? 'left:4px' : 'right:4px'};top:12px;background:var(--subtle);color:var(--t2)" data-jump="${s.date}" data-tip="Show ${D.fmt(s.date)} in timeline">${D.diff(s.date, start) < 0 ? '‹ ' : ''}${D.fmtShort(s.date)}${D.diff(s.date, start) < 0 ? '' : ' ›'}</div>`;
+          nRows++;
           rows += `<div class="tl-row" data-row>
-            <div class="tl-lcell s tl-left" data-ship="${s.id}" style="grid-template-columns:${colT}">
-              <div class="first">${legendShipIcon(s.status, 16)}<span class="ell" data-tip="${esc(s.name)}">${hl(s.name, q)}</span></div>
-              ${cols.slice(1).map((c) => `<div class="cap" style="font-size:12px">${esc(s[c.k])}</div>`).join('')}
+            <div class="tl-lcell s tl-left" data-ship="${s.id}">
+              ${legendShipIcon(s.status, 18)}
+              <div class="tt"><div class="t1" data-tip="${esc(s.name)}">${hl(s.name, q)}</div><div class="t2">${hl(s.no, q)} · ${D.dayName(s.date)} ${D.fmtShort(s.date)} · ${s.start}–${s.end} · ${s.up}</div></div>
             </div>
             <div class="tl-rcell s">${bg}${bar}</div></div>`;
         });
         if (list.length > MAX || (g.wp && S.wpStatus(g.wp) !== 'completed')) {
+          nRows++;
           rows += `<div class="tl-row"><div class="tl-showall tl-left" style="gap:8px">${list.length > MAX ? `<a class="link" data-showall="${esc(key)}">${all ? ms('expand_less', 's18') + 'Show less' : ms('expand_more', 's18') + `Show all ${list.length}`}</a>` : ''}${g.wp && S.wpStatus(g.wp) !== 'completed' ? `${list.length > MAX ? '<span class="faint">·</span>' : ''}<a class="link" data-add-ship="${g.wp.id}">${ms('add', 's16')}Add shipment</a>` : ''}</div><div class="tl-rcell s showall">${bg}</div></div>`;
         }
       }
@@ -291,7 +295,7 @@
         <button class="dd-btn" id="tlPeriod">${ms('date_range')}<span>${P.period} Week${P.period > 1 ? 's' : ''}</span>${ms('expand_more')}</button>
         <button class="btn text neutral" id="tlExpand">${ms(anyOpen(groups) ? 'unfold_less' : 'unfold_more')}${anyOpen(groups) ? 'Collapse all' : 'Expand all'}</button>
       </div>
-      ${groups.length ? `<div class="tl-grid ${dayW}" id="tlGrid" style="grid-template-columns:${leftW}px minmax(${days * (days > 35 ? 14 : days > 14 ? 16 : 40)}px, 1fr)">${head}${rows}</div>` : emptyHtml()}
+      ${groups.length ? `<div class="tl-grid ${dayW}" id="tlGrid" style="grid-template-columns:${leftW}px minmax(${days * (days > 35 ? 14 : days > 14 ? 16 : 40)}px, 1fr);grid-template-rows:repeat(${nRows}, max-content) minmax(0, 1fr)">${head}${rows}<div class="tl-row"><div class="tl-left tl-fill"></div><div class="tl-rcell tl-fill">${bg}</div></div></div>` : emptyHtml()}
       <div class="tl-foot"><span>Shipment status:</span>${legend}<span class="sp"></span>${P.groupBy === 'wp' ? `<a class="link" data-add-wp>${ms('add_circle', 's18')}Working package</a>` : ''}</div>
     </div>`;
   }
