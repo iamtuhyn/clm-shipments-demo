@@ -34,7 +34,7 @@
           ${!wp || status !== 'completed' ? `<button class="btn primary" id="gAdd">${ms('add')}Add shipment</button>` : ''}
         </div>
       </div>
-      <div class="split-layout" style="--rp-top:96px">
+      <div class="split-layout" style="--rp-top:24px">
         <div>
           <div class="kpis" id="gKpis"></div>
           <div class="card" style="margin-top:12px;padding:0;overflow:hidden">
@@ -70,15 +70,14 @@
       list = list.slice().sort((a, b) => key[st.sort](a).localeCompare(key[st.sort](b)) * st.dir);
       const th = (k, l) => `<th class="sortable" data-sort="${k}">${l}${st.sort === k ? ms(st.dir > 0 ? 'arrow_upward' : 'arrow_downward') : ''}</th>`;
       const tbl = view.querySelector('#gTable');
-      tbl.innerHTML = list.length ? `<table class="table"><thead><tr>${th('name', 'Shipment')}${th('date', 'Date &amp; time slot')}${th('vehicle', 'Vehicle')}<th>Unloading point</th>${by !== 'wp' ? '<th>Working package</th>' : ''}${th('status', 'Status')}<th style="width:44px"></th></tr></thead><tbody>
+      tbl.innerHTML = list.length ? `<table class="table"><thead><tr>${th('name', 'Shipment')}${th('date', 'Date &amp; time slot')}${th('vehicle', 'Vehicle · unloading point')}${by !== 'wp' ? '<th>Working package</th>' : ''}${th('status', 'Status')}<th style="width:44px"></th></tr></thead><tbody>
         ${list.map((s) => { const late = D.diff(s.date, D.today) < 0 && !['Completed', 'Canceled', 'Rejected'].includes(s.status); return `<tr class="click" data-ship="${s.id}">
-          <td><div class="row" style="gap:10px">${HUB_legendShipIcon(s.status, 18)}<div style="min-width:0;max-width:300px"><div class="tline1 ell" data-tip="${esc(s.name)}">${hl(s.name, st.q)}</div><div class="tline2">${hl(s.no, st.q)}</div></div></div></td>
+          <td><div class="row" style="gap:10px">${HUB_legendShipIcon(s.status, 18)}<div style="min-width:0;max-width:230px"><div class="tline1 ell" data-tip="${esc(s.name)}">${hl(s.name, st.q)}</div><div class="tline2">${hl(s.no, st.q)}</div></div></div></td>
           <td class="nowrap"><div>${D.dayName(s.date)}, ${D.fmt(s.date)}</div><div class="tline2 ${late ? 'err-t' : ''}">${s.start} – ${s.end}${late ? ' · late' : D.diff(s.date, D.today) >= 0 && D.diff(s.date, D.today) < 7 ? ' · ' + D.rel(s.date) : ''}</div></td>
-          <td><div class="row" style="gap:8px">${ci(S.vehicle(s.vehicle).icon, 34, 'height:17px;color:var(--icon)')}<span class="nowrap">${esc(S.vehicle(s.vehicle).name)}</span></div></td>
-          <td class="nowrap">${s.up}<div class="tline2">${esc(s.zone)}</div></td>
+          <td><div class="nowrap">${esc(S.vehicle(s.vehicle).name)}</div><div class="tline2 nowrap">${s.up} · ${esc(s.zone)}</div></td>
           ${by !== 'wp' ? `<td><a class="link" data-wp="${s.wpId}">${esc(S.wp(s.wpId).title)}</a></td>` : ''}
           <td class="nowrap">${UI.shipPill(s.status)}</td>
-          <td><button class="icon-btn sm" data-rowmenu="${s.id}" data-tip="Actions">${ms('more_vert')}</button></td></tr>`; }).join('')}
+          <td style="padding-left:0"><button class="icon-btn sm" data-rowmenu="${s.id}" data-tip="Actions">${ms('more_vert')}</button></td></tr>`; }).join('')}
       </tbody></table>` : `<div class="empty">${ms('local_shipping')}<span>${all.length ? 'No shipments match this filter.' : 'No shipments in this working package yet.'}</span>${wp && status !== 'completed' ? `<button class="btn primary" data-addship>${ms('add')}Add shipment</button>` : ''}</div>`;
       tbl.querySelectorAll('[data-sort]').forEach((h) => h.onclick = () => { if (st.sort === h.dataset.sort) st.dir *= -1; else { st.sort = h.dataset.sort; st.dir = 1; } drawTable(); });
       tbl.onclick = (e) => {

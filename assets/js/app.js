@@ -1,18 +1,19 @@
 /* App shell: side navigation, top bar, router */
 (function () {
   const { ms, esc } = UI;
+  // Side navigation items — icons are the CLM nav assets from Figma (Side Navigation component)
   const NAV = [
-    ['cockpit', 'dashboard', 'Cockpit'], ['shipments', 'local_shipping', 'Shipments'], ['equipment', 'precision_manufacturing', 'Equipment'],
-    ['hub', 'account_balance', 'Consolidation Hub'], ['projects', 'space_dashboard', 'Projects'], ['zone', 'radar', 'Logistics Zone'],
-    ['material', 'layers', 'Material Management'], ['team', 'group_add', 'Team'], ['help', 'help', 'Help'], ['upload', 'cloud_upload', 'Upload'],
-    ['admin', 'manage_accounts', 'Administrator'],
+    ['cockpit', 'nav-layout-b', 'Cockpit'], ['shipments', 'nav-shipping', 'Shipments'], ['equipment', 'nav-equipment', 'Equipment'],
+    ['hub', 'nav-account-balance', 'Consolidation Hub'], ['projects', 'nav-layout-b', 'Projects'], ['zone', 'nav-blur', 'Logistics Zone'],
+    ['material', 'nav-layers', 'Material Management'], ['team', 'nav-group-add', 'Team'], ['help', 'nav-help', 'Help'], ['upload', 'nav-upload', 'Upload'],
+    ['admin', 'nav-admin', 'Administrator'],
   ];
+  const NA_ICON = { cockpit: 'dashboard', equipment: 'precision_manufacturing', hub: 'account_balance', projects: 'dashboard', zone: 'blur_circular', material: 'layers', team: 'group_add', help: 'help', admin: 'group' };
   const view = document.getElementById('view');
 
   // ---------- shell ----------
-  document.getElementById('snLogo').innerHTML = (CLM_ICONS['logo-clm'] || '');
   const items = document.getElementById('snItems');
-  items.innerHTML = NAV.map(([k, ic, l]) => `<a class="sn-item" href="#/${k === 'shipments' ? 'shipments' : k === 'upload' ? 'upload' : 'na/' + k}" data-nav="${k}" data-tip="${l}" data-tip-pos="right">${ms(ic)}<span>${l}</span></a>`).join('');
+  items.innerHTML = NAV.map(([k, ic, l]) => `<a class="sn-item" href="#/${k === 'shipments' ? 'shipments' : k === 'upload' ? 'upload' : 'na/' + k}" data-nav="${k}" data-tip="${l}" data-tip-pos="right"><span class="nav-ic"><img src="assets/fig/${ic}.svg" alt=""></span><span>${l}</span></a>`).join('');
   const app = document.getElementById('app');
   const setCollapsed = (v) => { app.classList.toggle('nav-collapsed', v); document.getElementById('snBurger').dataset.tip = v ? 'Expand menu' : 'Collapse menu'; };
   setCollapsed(!!S.prefs.navCollapsed);
@@ -66,10 +67,21 @@
     items.querySelectorAll('.sn-item').forEach((x) => x.classList.toggle('active', x.dataset.nav === nav));
     const title = { shipments: 'Shipments', group: 'Working package', shipment: 'Shipment', create: 'Create shipment', upload: 'Upload', na: 'CLM' }[name] || 'Shipments';
     document.title = 'CLM · ' + title;
+    fitPanels();
   }
+  // The right-hand details panel sticks below the page header and always fills the remaining height
+  function fitPanels() {
+    requestAnimationFrame(() => {
+      const h = view.querySelector('.sticky-head')?.offsetHeight || 0;
+      view.querySelectorAll('.split-layout').forEach((el) => el.style.setProperty('--rp-top', (h + 24) + 'px'));
+    });
+  }
+  window.fitPanels = fitPanels;
+  window.addEventListener('resize', fitPanels);
+  new MutationObserver(fitPanels).observe(view, { childList: true });
   function notAvailable(k) {
     const n = NAV.find((x) => x[0] === k) || NAV[0];
-    view.innerHTML = `<div class="page"><div class="na-page"><div>${ms(n[1])}<h2>${n[2]}</h2><p>This area is not part of this demo.<br>The demo covers the <b>Shipments</b> module end-to-end.</p><a class="btn primary" style="margin-top:16px" href="#/shipments">${ms('local_shipping')}Go to Shipments</a></div></div></div>`;
+    view.innerHTML = `<div class="page"><div class="na-page"><div>${ms(NA_ICON[k] || 'info')}<h2>${n[2]}</h2><p>This area is not part of this demo.<br>The demo covers the <b>Shipments</b> module end-to-end.</p><a class="btn primary" style="margin-top:16px" href="#/shipments">${ms('local_shipping')}Go to Shipments</a></div></div></div>`;
   }
   // back-arrow navigation: return to the screen the user came from
   const stack = [];

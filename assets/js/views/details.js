@@ -13,19 +13,19 @@
     const counts = { documents: s.docs.length + s.photos.length, annotations: s.annotations.length, activity: s.activity.length };
     v.innerHTML = `
     <div class="page">
-      <div class="sticky-head lined">
+      <div class="sticky-head">
         <div class="page-head" style="padding-bottom:6px">
           <button class="back" id="dBack" data-tip="Back">${ms('arrow_back')}</button>
           <div class="grow">
-            <div class="row" style="gap:10px"><h1 class="ell">${esc(s.name)}</h1>${UI.shipPill(s.status)}</div>
+            <div class="row" style="gap:10px"><h1 class="ell">${esc(s.name)}</h1><span class="pill ${{ neutral: '', olive: 'olive', success: 'success', blue: 'inactive', error: 'error', inactive: 'inactive' }[SHIPMENT_STATUS[s.status].tone]}">${esc(s.status)}</span></div>
             <div class="meta"><span>${ms('tag')}${esc(s.no)}</span><span>${ms('person')}Created ${UI.dt(s.created)} by ${esc(cr.name)}</span><span>${ms('location_on')}${esc(s.building)} · ${esc(s.floor)} · ${esc(s.zone)}</span><span>${ms('folder')}<a href="#/group/wp/${wp.id}">${esc(wp.title)}</a></span></div>
           </div>
           <button class="btn text" id="dPrint">${ms('print')}Print</button>
           <button class="btn" id="dEdit" ${['Completed', 'Canceled'].includes(s.status) ? 'disabled data-tip="Completed or canceled shipments can’t be edited"' : ''}>${ms('edit')}Edit shipment</button>
         </div>
-        <div class="tabs" role="tablist" style="border-bottom:0">${TABS.map(([k, l]) => `<a class="tab ${tab === k ? 'on' : ''}" href="#/shipment/${s.id}/${k}" role="tab" aria-selected="${tab === k}">${l}${k !== 'overview' ? ` <span class="count">${counts[k]}</span>` : ''}</a>`).join('')}</div>
+        <div class="tabs" role="tablist">${TABS.map(([k, l]) => `<a class="tab ${tab === k ? 'on' : ''}" href="#/shipment/${s.id}/${k}" role="tab" aria-selected="${tab === k}"><span class="lw">${l}${k !== 'overview' ? `<span class="count">${counts[k]}</span>` : ''}</span><span class="ind"></span></a>`).join('')}</div>
       </div>
-      <div class="split-layout" style="--rp-top:140px;margin-top:16px">
+      <div class="split-layout" style="--rp-top:24px">
         <div id="dTab">${tabHtml(tab)}</div>
         <aside class="rpanel" id="dPanel">${panelHtml()}</aside>
       </div>
@@ -45,7 +45,7 @@
     const seed = +date.slice(8) + +date.slice(5, 7);
     return Array.from({ length: 12 }, (_, i) => {
       const h = 7 + i; const k = (seed + i * 3) % 10;
-      const ic = k < 4 ? ['sunny', 'sun'] : k < 7 ? ['partly_cloudy_day', 'sun'] : k < 9 ? ['cloud', 'cloud'] : ['rainy', 'rain'];
+      const ic = k < 4 ? 'sun' : k < 7 ? 'partly' : k < 9 ? 'cloud' : 'rain';
       return { h, ic, t: 12 + Math.round(4 * Math.sin((i / 11) * Math.PI)) + (seed % 3) };
     });
   }
@@ -53,7 +53,7 @@
   function overviewHtml() {
     const v = S.vehicle(s.vehicle); const w = weatherFor(s.date);
     const sh = +s.start.slice(0, 2), eh = +s.end.slice(0, 2) + (+s.end.slice(3) ? 1 : 0);
-    const rainAt = w.find((x) => x.ic[1] === 'rain');
+    const rainAt = w.find((x) => x.ic === 'rain');
     return `
     ${s.justCreated ? `<div class="banner ok" style="margin-bottom:12px" id="dCreated">${ms('check_circle')}<div class="grow"><b>Shipment created</b><p>${s.status === 'Open' ? 'It is waiting for approval by the site logistics team. You’ll be notified when it’s approved.' : 'It is approved and visible to the site team.'}</p></div><button class="icon-btn sm x" data-dismiss>${ms('close')}</button></div>` : ''}
     ${s.status === 'Canceled' || s.status === 'Rejected' ? `<div class="banner err" style="margin-bottom:12px">${ms('block')}<div><b>${s.status === 'Canceled' ? 'Shipment canceled' : 'Shipment rejected'}</b><p>${esc(s.reason || 'No reason given.')}</p></div></div>` : ''}
@@ -62,10 +62,10 @@
         <div class="tile">${ms('event')}<div style="min-width:0"><div class="overline">Date</div><b>${D.dayName(s.date)}, ${D.fmt(s.date)}</b></div></div>
         <div class="tile">${ms('schedule')}<div style="min-width:0"><div class="overline">Time slot</div><b>${s.start} – ${s.end}</b></div></div>
         <div class="tile">${ms('location_on')}<div style="min-width:0"><div class="overline">Unloading point</div><b>${s.up} · ${esc(s.zone)}</b></div></div>
-        <div class="tile">${ci(v.icon, 34, 'height:20px')}<div style="min-width:0"><div class="overline">Vehicle</div><b data-tip="${esc(v.name)}">${esc(v.name)} · ${s.vehicles || 1}</b></div></div>
+        <div class="tile">${ms('local_shipping')}<div style="min-width:0"><div class="overline">Vehicle</div><b data-tip="${esc(v.name)}">${esc(v.name)} · ${s.vehicles || 1}</b></div></div>
       </div></div>
     <div class="card"><div class="card-head"><div class="grow"><div class="card-h">Weather</div></div><span class="cap">${D.dayName(s.date)}, ${D.fmt(s.date)} · ${esc(s.building)}</span></div>
-      <div class="weather-row">${w.map((x) => `<div class="wh ${x.h >= sh && x.h < eh ? 'in' : ''}" data-tip="${String(x.h).padStart(2, '0')}:00 · ${x.t}°"><span class="cap">${String(x.h).padStart(2, '0')}:00</span>${ms(x.ic[0], x.ic[1])}<span>${x.t}°</span></div>`).join('')}</div>
+      <div class="weather-row">${w.map((x) => `<div class="wh ${x.h >= sh && x.h < eh ? 'in' : ''}" data-tip="${String(x.h).padStart(2, '0')}:00 · ${x.t}°"><span class="cap">${String(x.h).padStart(2, '0')}:00</span>${UI.wx(x.ic, 24)}<span>${x.t}°</span></div>`).join('')}</div>
       <div class="cap row" style="margin-top:8px;gap:6px">${ms('info', 's16')}Highlighted hours are your time slot${rainAt ? ` · rain expected from ${String(rainAt.h).padStart(2, '0')}:00` : ' · no rain expected'}.</div></div>
     <div class="card"><div class="card-head"><div class="grow"><div class="card-h">Materials (${s.materials.length})</div></div></div>
       <div class="tbl-wrap"><table class="table"><thead><tr><th>Material</th><th>Quantity</th><th>Packaging</th><th>Note</th></tr></thead><tbody>
@@ -113,27 +113,30 @@
   function panelHtml() {
     const st = SHIPMENT_STATUS[s.status]; const wp = S.wp(s.wpId); const v = S.vehicle(s.vehicle);
     const booked = s.equipment.filter((e) => e.kind === 'booked'); const onsite = s.equipment.filter((e) => e.kind === 'onsite');
-    const p = (id) => (id ? S.person(id).name : null);
     const row = (k, val) => `<dt>${k}</dt><dd class="${val ? '' : 'na'}">${val ? esc(val) : 'Not added'}</dd>`;
+    const contact = (role, id) => { if (!id) return ''; const p = S.person(id); return `<div class="contact"><div class="overline">${role}</div><div class="person"><span class="av">${ms('person')}</span><div class="grow"><b>${esc(p.name)}</b><div class="cap">${esc(p.phone || '')}</div><div class="cap">${esc(p.email || '')}</div></div></div></div>`; };
     return `<div class="rp-head"><h3>Details</h3><div class="rp-name">${esc(s.name)}</div>
-        <div class="status-btn ${isDark(st.color) ? 'dark-t' : ''}" style="background:${st.color}">
-          <div class="sb-main">${ci(st.icon, 18)}${esc(s.status)}</div>
-          <button class="sb-dd" id="dStatus" data-tip="Change status" ${!STATUS_FLOW[s.status].length ? 'disabled style="opacity:.5;cursor:not-allowed"' : ''}>${ms('expand_more')}</button>
+        <div class="status-btn ${isDark(st.color) ? 'dark-t' : ''}">
+          <div class="sb-main" style="background:${st.color}">${ci(st.icon, 20)}${esc(s.status)}</div>
+          <button class="sb-dd" id="dStatus" style="background:${st.color};${!STATUS_FLOW[s.status].length ? 'opacity:.5;cursor:not-allowed' : ''}" data-tip="Change status" ${!STATUS_FLOW[s.status].length ? 'disabled' : ''}>${ms('expand_more')}</button>
         </div></div>
       <div class="rp-body">
-        <div class="rp-sec"><h4>Shipment information</h4><dl class="kv">
-          ${row('Shipment no', s.no)}${row('Shipment date', D.fmt(s.date))}<dt>Working package</dt><dd><a href="#/group/wp/${wp.id}">${esc(wp.trade)} · ${esc(wp.title)}</a></dd>
-          ${row('Vehicle', `${v.name} · ${s.vehicles || 1} vehicle${(s.vehicles || 1) > 1 ? 's' : ''}`)}${row('Unloading point', `${s.up} · ${s.start} – ${s.end}`)}
-          ${row('Sender', s.sender)}${row('Recipient', s.recipient)}</dl></div>
-        <div class="rp-sec"><h4>Equipment and usage</h4><dl class="kv">
+        <div class="rp-sec"><h4>Shipment Information</h4><dl class="kv">
+          ${row('Shipment No', s.no)}${row('Shipment Date', D.fmt(s.date))}<dt>Working Package</dt><dd><a href="#/group/wp/${wp.id}">${esc(wp.trade)} · ${esc(wp.title)}</a></dd>
+          ${row('Vehicle', `${v.name} · ${s.vehicles || 1} vehicle${(s.vehicles || 1) > 1 ? 's' : ''}`)}${row('Unloading Point', `${s.up} · ${s.start} – ${s.end}`)}</dl></div>
+        <div class="rp-sec"><h4>Equipment and Usage</h4><dl class="kv">
           <div class="sub">Logistic equipment</div>
           ${onsite.length ? onsite.map((e) => row('Name', S.equipment(e.id).name) + row('Usage', `${e.pulls || 1} pull${(e.pulls || 1) > 1 ? 's' : ''}`) + row('Duration', `${e.start} – ${e.end}`)).join('') : row('Name', null)}
           <div class="sub">Special equipment</div>
-          ${booked.length ? booked.map((e) => row('Name', S.equipment(e.id).name) + row('Duration', `${e.start} – ${e.end}`) + row('Planned usage', `${S.equipment(e.id).slot || 20} minutes`) + row('Estimated cost', 'Free of charge')).join('') : row('Name', null)}
+          ${booked.length ? booked.map((e) => row('Name', S.equipment(e.id).name) + row('Duration', `${e.start} – ${e.end}`) + row('Planned Usage', `${S.equipment(e.id).slot || 20} minutes`) + row('Estimated Cost', 'Free of charge')).join('') : row('Name', null)}
         </dl></div>
-        <div class="rp-sec"><h4>Responsible persons</h4><dl class="kv">${row('Created by', p(s.createdBy))}${row('Onsite contact', p(s.onsite))}${row('Order', p(s.orderResp))}${row('Delivery', p(s.deliveryResp))}</dl></div>
+        <div class="rp-sec"><h4>Destination</h4><dl class="kv">${row('Team', s.recipient)}${row('Building', s.building)}${row('Floor', s.floor)}${row('Zone', s.zone)}</dl></div>
+        <div class="rp-sec"><h4>Sender</h4><dl class="kv">${row('Team', s.sender)}</dl></div>
+        <div class="rp-sec"><h4>Materials</h4>${s.materials.map((m) => { const mm = S.material(m.id); return `<div class="overline">${esc(mm.name)}</div><dl class="kv">${row('Quantity', `${m.qty} ${m.unit || mm.unit}`)}</dl>`; }).join('')}</div>
+        <div class="rp-sec"><h4>Sustainability</h4><dl class="kv">${row('Address', s.origin)}${row('Distance', s.km ? s.km + ' km' : '')}</dl></div>
+        <div class="rp-sec"><h4>Responsible Person</h4>${contact('Creator', s.createdBy)}${contact('Onsite', s.onsite)}${contact('Order responsible', s.orderResp)}${contact('Delivery responsible', s.deliveryResp)}</div>
       </div>
-      <div class="rp-foot"><button class="btn primary" id="dManage" style="width:100%">Manage${ms('expand_more')}</button></div>`;
+      <div class="rp-foot"><button class="btn primary" id="dManage" style="width:100%">Manage</button></div>`;
   }
 
   // ---------------------------------------------------------------- events

@@ -163,7 +163,34 @@
   }
   const fileSize = (b) => (b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB');
 
+  // DS weather assets (Amlog DS/Asset/Weather)
+  const WX = { sun: 'w-sun', sunny: 'w-sun', partly: 'w-partly', partly_cloudy_day: 'w-partly', cloud: 'w-cloud', rain: 'w-rain', rainy: 'w-rain' };
+  const wx = (kind, size = 24, cls = '') => `<img class="${cls}" src="assets/fig/${WX[kind] || 'w-sun'}.svg" width="${size}" height="${size}" alt="">`;
+  // DS status dots for filter pills (status/*/fg)
+  const DOT = { overdue: '#B51C00', active: '#065F46', pending: '#92400E', completed: '#54545D' };
+
+  /* Amlog DS/Pattern/Working Package Card (folder) — o: { title, trade, building, floor, dates, sender, counts:{open,approved,completed,draft}, status, sel, attrs, tabLabel, tabColor } */
+  function wpCard(o) {
+    const col = o.tabColor || tradeColor(o.trade); const dark = o.tabColor ? false : tradeDark(o.trade);
+    const c = o.counts || {};
+    return `<div class="fcard ${o.sel ? 'sel' : ''}" tabindex="0" ${o.attrs || ''}>
+      <div class="ftab ${dark ? 'dark-t' : ''}" style="background:${col}">${esc(o.tabLabel || o.trade)}</div>
+      <div class="fbody">
+        <div class="ft"><span class="t" data-tip="${esc(o.title)}">${o.titleHtml || esc(o.title)}</span>${o.sel ? `<span class="chk">${ms('check')}</span>` : o.status ? `<span data-tip="Working package: ${WP_STATUS[o.status].label}">${ci(WP_STATUS[o.status].icon, 18)}</span>` : ''}</div>
+        <div class="fl"><img src="assets/fig/wp-building.svg" width="20" height="20" alt="">${esc(o.building)}</div>
+        <div class="fl"><img src="assets/fig/wp-floor.svg" width="20" height="20" alt="">${esc(o.floor)}</div>
+        <div class="fl">${esc(o.dates)}</div>
+        <div class="fsub">${esc(o.sender)}</div>
+        <div class="fstats">
+          <span data-tip="Open"><img src="assets/fig/wp-open.svg" alt="">${c.open || 0}</span>
+          <span data-tip="Approved / in progress"><img src="assets/fig/wp-approved.svg" alt="">${c.approved || 0}</span>
+          <span data-tip="Completed"><img src="assets/fig/wp-completed.svg" alt="">${c.completed || 0}</span>
+          <span data-tip="Draft / canceled"><img src="assets/fig/wp-draft.svg" alt="">${c.draft || 0}</span>
+        </div>
+      </div></div>`;
+  }
+
   function go(hash) { if (location.hash === hash) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = hash; }
 
-  window.UI = { esc, ms, ci, initials, hl, dt, isDark, wpPill, wpIcon, shipPill, shipIcon, tradeColor, tradeDark, menu, float, closeFloat, place, toast, modal, confirm, lightbox, pickFiles, fileSize, go };
+  window.UI = { wx, wpCard, DOT, esc, ms, ci, initials, hl, dt, isDark, wpPill, wpIcon, shipPill, shipIcon, tradeColor, tradeDark, menu, float, closeFloat, place, toast, modal, confirm, lightbox, pickFiles, fileSize, go };
 })();

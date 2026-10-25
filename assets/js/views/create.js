@@ -86,10 +86,10 @@
     const edit = d.mode === 'edit';
     v.innerHTML = `
     <div class="page">
-      <div class="sticky-head lined">
-        <div class="page-head" style="min-height:52px;padding:10px 0 0">
+      <div class="sticky-head">
+        <div class="flow-head">
           <button class="back" id="cBack" data-tip="Leave">${ms('arrow_back')}</button>
-          <h1 style="font-size:18px;font-weight:500">${edit ? 'Edit shipment' : 'Create shipment'}</h1>
+          <h1>${edit ? 'Edit Shipment' : 'Create Shipment'}</h1>
           ${d.fromTemplate ? `<span class="pill olive" style="margin-left:4px">Template · ${esc(d.fromTemplate)}</span>` : ''}
         </div>
         <div class="stepper-bar">
@@ -99,7 +99,7 @@
           <button class="btn primary" id="cNext"></button>
         </div>
       </div>
-      <div class="split-layout" style="--rp-top:132px;margin-top:16px">
+      <div class="split-layout" style="--rp-top:24px">
         <div id="cStep"></div>
         <aside class="rpanel" id="cSummary"></aside>
       </div>
@@ -231,7 +231,7 @@
       <div class="sel-grid" style="grid-template-columns:repeat(7,1fr)">
         ${days.map((x) => { const st = dayState(x); const w = weather(x); const off = st === 'past' || st === 'closed' || (st === 'express' && !d.express);
           return `<div class="stile day-card ${x === d.date ? 'on' : ''} ${off ? 'off' : ''}" data-day="${x}" data-st="${st}" ${st === 'closed' ? 'data-tip="Weekends are closed"' : st === 'past' ? 'data-tip="This day is in the past"' : st === 'express' && !d.express ? 'data-tip="Tick “Express shipment” to book this day"' : ''}>
-            <b>${+x.slice(8)}, ${D.dayName(x)}</b>${ms(w[0], w[1])}<span class="temp"><span class="lo">${10 + w[2]}°</span> <span class="hi">${16 + w[2]}°</span></span><small>${ms('south_east', 's16')} ${2 + w[2]} km/h</small>${st === 'express' ? '<span class="pill error">Express</span>' : ''}</div>`; }).join('')}
+            <b>${+x.slice(8)}, ${D.dayName(x)}</b>${UI.wx(w[1] === 'sun' && w[0] !== 'sunny' ? 'partly' : w[1], 32, 'wx')}<span class="temp"><span class="lo">${10 + w[2]}°</span><span class="hi">${16 + w[2]}°</span></span><small>${ms('south_east')} ${2 + w[2]} km/h</small>${st === 'express' ? '<span class="pill error">Express</span>' : ''}</div>`; }).join('')}
       </div>
       <div class="row cap" style="margin-top:10px;gap:8px"><span class="pill error">Express</span>Only bookable as express shipment · Weekends are closed</div>
       <div class="grid2" style="margin-top:14px">
@@ -243,12 +243,8 @@
     <div class="card" data-err="wp"><div class="card-head"><div class="grow"><div class="card-h">Working package</div><div class="card-sub">${d.wpLocked ? 'This shipment is added to the working package you started from.' : 'Assign the shipment to the working package it belongs to.'}</div></div>
       ${d.wpLocked ? `<span class="pill olive">${ms('lock', 's16')}Locked</span>` : ''}</div>
       ${d.wpLocked ? '' : `<div class="row" style="gap:16px;margin-bottom:14px"><div class="input-icon grow">${ms('search')}<input class="input" id="wpQ" placeholder="Search working packages" value="${esc(wpSearch)}"></div><label class="check"><input type="checkbox" id="wpAll" ${wpShowAll ? 'checked' : ''}>Show all organizations</label></div>`}
-      <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">
-        ${list.map((w) => { const st = S.wpStats(w); return `<div class="fcard ${w.id === d.wpId ? 'sel' : ''}" data-wp="${w.id}" tabindex="0">
-          <div class="ftab ${tradeDark(w.trade) ? 'dark-t' : ''}" style="background:${tradeColor(w.trade)}">${esc(w.trade)}</div>
-          <div class="fbody"><div class="ft"><span class="t" data-tip="${esc(w.title)}">${esc(w.title)}</span>${w.id === d.wpId ? `<span style="color:var(--olive)">${ms('check_circle', 'fill')}</span>` : ci(WP_STATUS[S.wpStatus(w)].icon, 16)}</div>
-            <div class="fl">${ms('apartment')}${esc(w.building)} · ${esc(w.floor)}</div><div class="fl">${D.fmt(w.from)} – ${D.fmt(w.to)}</div><div class="fsub">${esc(w.sender)}</div>
-            <div class="fstats"><span>${ms('local_shipping', 's16')}${st.total}</span><span>${ci('legend-approved', 16)}${st.approved}</span><span>${ci('legend-completed', 16)}${st.done}</span><span>${ci('legend-open', 16)}${st.open}</span></div></div></div>`; }).join('') || `<div class="cap">No working package found. <a class="link" id="wpCreate">Create a new one</a></div>`}
+      <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+        ${list.map((w) => { const st = S.wpStats(w); return UI.wpCard({ title: w.title, trade: w.trade, building: w.building, floor: w.floor, dates: D.fmt(w.from) + ' - ' + D.fmt(w.to), sender: w.sender, counts: { open: st.open, approved: st.approved, completed: st.done, draft: st.canceled }, status: S.wpStatus(w), sel: w.id === d.wpId, attrs: `data-wp="${w.id}"` }); }).join('') || `<div class="cap">No working package found. <a class="link" id="wpCreate">Create a new one</a></div>`}
       </div>
       ${outside ? `<div class="banner" style="margin-top:12px">${ms('event_busy')}<div><b>Date is outside the booking window</b><p>${esc(wp.title)} runs from ${D.fmt(wp.from)} to ${D.fmt(wp.to)}. You can still create the shipment, but the site team will review it.</p></div></div>` : ''}
       <span class="error-msg" style="margin-top:8px"></span>
@@ -296,7 +292,7 @@
       <div class="row" style="margin-bottom:12px"><div class="chips">${['All', 'Pinned', 'Bulk', 'Pallets'].map((f) => `<button class="chip filled ${matFilter === f ? 'on' : ''}" data-mf="${f}">${f}</button>`).join('')}</div><span class="sp"></span><div class="input-icon" style="width:240px">${ms('search')}<input class="input" id="matQ" placeholder="Search material" value="${esc(matSearch)}"></div></div>
       <div class="sel-grid" style="grid-template-columns:repeat(6,1fr)">
         <div class="stile add-stile" id="matNew">${ms('add', 's24')}<b>Add new</b></div>
-        ${show.map((m) => { const s = sel(m.id); return `<div class="stile ${s ? 'on' : ''}" data-mat="${m.id}">${ms('category', 's24')}<b>${esc(m.name)}</b><small>Unit: ${esc(m.unit)}</small>${s ? `<span class="pill olive">${s.qty} ${esc(s.unit)}</span>` : ''}</div>`; }).join('')}
+        ${show.map((m) => { const s = sel(m.id); return `<div class="stile ${s ? 'on' : ''}" data-mat="${m.id}">${ms('widgets', 's24')}<b>${esc(m.name)}</b><small>Unit: ${esc(m.unit)}</small>${s ? `<span class="pill olive">${s.qty} ${esc(s.unit)}</span>` : ''}</div>`; }).join('')}
       </div>
       ${list.length > 11 && matFilter === 'All' && !q ? `<a class="link" id="matMore" style="margin-top:10px">${ms(d.showAllMat ? 'expand_less' : 'expand_more', 's18')}${d.showAllMat ? 'Show fewer' : `See all materials (${list.length})`}</a>` : ''}
       ${!list.length ? `<div class="cap" style="margin-top:8px">No material found. <a class="link" id="matNew2">Add “${esc(matSearch)}”</a></div>` : ''}
@@ -428,7 +424,7 @@
       <div class="slot-grid" style="grid-template-columns:96px 1fr ${eqCol ? '1fr' : ''}">
         <div class="sgh"></div><div class="sgh" style="border-left:1px solid #eee">${esc(d.up)}<small>Slot length ${up ? up.slot : 20} min${sel ? ` · Selected: ${d.start} – ${d.end}` : ''}</small></div>
         ${eqCol ? `<div class="sgh" style="border-left:1px solid #eee">${esc(S.equipment(eqCol.id).name)}<small>Slot length ${S.equipment(eqCol.id).slot} min · Selected: ${eqCol.start} – ${eqCol.end}</small></div>` : ''}
-        ${hours.map((h) => { const wx = w(h); return `<div class="hr"><b>${String(h).padStart(2, '0')}:00</b><span>${ms(wx[0], wx[1] + ' s18')}</span><span>${wx[2]}</span></div><div class="cells">${[0, 20, 40].map((o) => cell('up', h * 60 + o)).join('')}</div>${eqCol ? `<div class="cells">${[0, 20, 40].map((o) => cell('eq', h * 60 + o)).join('')}</div>` : ''}`; }).join('')}
+        ${hours.map((h) => { const wx = w(h); return `<div class="hr"><b>${String(h).padStart(2, '0')}:00</b><span>${UI.wx(wx[0] === 'partly_cloudy_day' ? 'partly' : wx[1], 18)}</span><span>${wx[2]}</span></div><div class="cells">${[0, 20, 40].map((o) => cell('up', h * 60 + o)).join('')}</div>${eqCol ? `<div class="cells">${[0, 20, 40].map((o) => cell('eq', h * 60 + o)).join('')}</div>` : ''}`; }).join('')}
       </div>
     </div>
     <div class="card ${!d.up ? 'hidden' : ''}"><div class="card-head"><div class="grow"><div class="card-h">Bookable equipment</div><div class="card-sub">Book special equipment for your delivery. Slot length is fixed per equipment. Bookings need approval.</div></div></div>

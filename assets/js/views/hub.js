@@ -25,21 +25,21 @@
         <div class="page-head">
           <h1>Shipments</h1>
           <span class="sp"></span>
-          <div class="input-icon search-box">${ms('search')}<input class="input" id="hubSearch" placeholder="Search packages and shipments" value="${esc(P.search)}" autocomplete="off"><button class="icon-btn sm clear ${P.search ? '' : 'hidden'}" id="hubClear" data-tip="Clear search">${ms('close')}</button></div>
+          <div class="input-icon search-box search-lg">${ms('search')}<input class="input" id="hubSearch" placeholder="Search packages and shipments" value="${esc(P.search)}" autocomplete="off"><button class="icon-btn sm clear ${P.search ? '' : 'hidden'}" id="hubClear" data-tip="Clear search">${ms('close')}</button></div>
           ${createButton()}
         </div>
-        <div class="hub-toolbar">
+      </div>
+      <div class="hub-toolbar">
           <div class="chips" id="hubChips"></div>
           <button class="info-btn" id="legendBtn" aria-label="Status legend">${ms('info')}</button>
           <div class="right">
             <span class="lbl-inline">Group by</span>
             <button class="dd-btn" id="groupBy"><span>${S.groupLabel(P.groupBy)}</span>${ms('expand_more')}</button>
             <div class="itabs" role="tablist" aria-label="View">
-              ${[['timeline', 'view_timeline', 'Timeline'], ['list', 'view_list', 'List'], ['cards', 'grid_view', 'Cards']].map(([k, ic, t]) => `<button class="itab ${P.view === k ? 'on' : ''}" data-view="${k}" data-tip="${t}" role="tab" aria-selected="${P.view === k}">${ms(ic)}</button>`).join('')}
+              ${[['timeline', 'view_timeline', 'Timeline'], ['list', 'view_list', 'List'], ['cards', 'view_module', 'Cards']].map(([k, ic, t]) => `<button class="itab ${P.view === k ? 'on' : ''}" data-view="${k}" data-tip="${t}" role="tab" aria-selected="${P.view === k}">${ms(ic)}</button>`).join('')}
             </div>
-            <button class="icon-btn ${P.panel ? 'active' : ''}" id="propsBtn" data-tip="Properties">${ms('settings', P.panel ? 'fill' : '')}</button>
+            <button class="icon-btn ${P.panel ? 'active' : ''}" id="propsBtn" data-tip="Properties">${ms('settings')}</button>
           </div>
-        </div>
       </div>
       <div class="hub-body">
         <div class="hub-main" id="hubMain"></div>
@@ -57,11 +57,10 @@
   function bindCreate(scope) {
     scope.querySelector('#createBtn').onclick = () => CREATE.start();
     scope.querySelector('#createMore').onclick = (e) => UI.menu(e.currentTarget, [
-      { label: 'Create shipment', icon: 'local_shipping', onClick: () => CREATE.start() },
-      { label: 'Create working package', icon: 'create_new_folder', onClick: () => WPFORM.open() },
-      { sep: true },
-      { label: 'Upload working packages (Excel)', icon: 'upload_file', onClick: () => UI.go('#/upload') },
-    ], { align: 'right' });
+      { label: 'New shipment', icon: 'local_shipping', onClick: () => CREATE.start() },
+      { label: 'New working package', icon: 'folder', onClick: () => WPFORM.open() },
+      { label: 'Import working packages (Excel)', icon: 'upload_file', onClick: () => UI.go('#/upload') },
+    ], { align: 'right', minWidth: 320 });
   }
   HUB_bindCreate = bindCreate;
 
@@ -99,8 +98,8 @@
   function renderChips() {
     const P = S.prefs; const c = S.countsByStatus();
     const el = root.querySelector('#hubChips');
-    el.innerHTML = `<button class="chip ${!P.wpStatus.length ? 'on' : ''}" data-st="">All <span class="n">${c.all}</span></button>` +
-      Object.entries(WP_STATUS).map(([k, w]) => `<button class="chip ${P.wpStatus.includes(k) ? 'on' : ''}" data-st="${k}" aria-pressed="${P.wpStatus.includes(k)}">${ci(w.icon, 14)}${w.label} <span class="n">${c[k]}</span></button>`).join('');
+    el.innerHTML = `<button class="chip ${!P.wpStatus.length ? 'on' : ''}" data-st="">All<span class="n">${c.all}</span></button>` +
+      Object.entries(WP_STATUS).map(([k, w]) => `<button class="chip ${P.wpStatus.includes(k) ? 'on' : ''}" data-st="${k}" aria-pressed="${P.wpStatus.includes(k)}"><i class="dot" style="background:${UI.DOT[k]}"></i>${w.label}<span class="n">${c[k]}</span></button>`).join('');
     el.querySelectorAll('.chip').forEach((b) => b.onclick = () => {
       const k = b.dataset.st;
       if (!k) P.wpStatus = [];
@@ -131,11 +130,11 @@
   // ---------------------------------------------------------------- LIST
   function listCols() {
     const c = S.prefs.columns;
-    const cols = ['40px', 'minmax(220px, 2.2fr)'];
-    if ((c.building || c.floor) && S.prefs.groupBy !== 'destination') cols.push('minmax(130px, 1.1fr)');
-    cols.push('minmax(150px, 1.2fr)');
-    if (c.sender || c.recipient) cols.push('minmax(170px, 1.3fr)');
-    cols.push('150px', '112px');
+    const cols = ['44px', 'minmax(200px, 1fr)'];
+    if ((c.building || c.floor) && S.prefs.groupBy !== 'destination') cols.push('150px');
+    cols.push('170px');
+    if (c.sender || c.recipient) cols.push('210px');
+    cols.push('170px', '132px');
     return cols.join(' ');
   }
   function listHtml(groups) {
@@ -177,10 +176,10 @@
       <div class="srow" data-ship="${s.id}" style="grid-template-columns:${listCols()}">
         <span></span>
         <div class="s-name">${legendShipIcon(s.status, 18)}<div style="min-width:0"><div class="ell" style="font-weight:500">${hl(s.name, q)}</div><div class="g-sub">${hl(s.no, q)}</div></div></div>
-        ${(S.prefs.columns.building || S.prefs.columns.floor) && S.prefs.groupBy !== 'destination' ? `<div>${s.up} · ${esc(s.building)} ${esc(s.floor)}</div>` : ''}
-        <div class="nowrap">${D.dayName(s.date)}, ${D.fmtShort(s.date)} · ${s.start}–${s.end}</div>
-        ${S.prefs.columns.sender || S.prefs.columns.recipient ? `<div class="row" style="gap:6px">${ci(S.vehicle(s.vehicle).icon, 30, 'height:16px;color:var(--icon)')}<span class="ell">${esc(S.vehicle(s.vehicle).name)}</span></div>` : ''}
-        <div class="cap">${s.equipment.length ? s.equipment.map((e) => S.equipment(e.id).name).join(', ') : 'No equipment'}</div>
+        ${(S.prefs.columns.building || S.prefs.columns.floor) && S.prefs.groupBy !== 'destination' ? `<div><div class="ell">${s.up}</div><div class="g-sub ell">${esc(s.building)} · ${esc(s.floor)}</div></div>` : ''}
+        <div><div class="nowrap">${D.dayName(s.date)}, ${D.fmtShort(s.date)}</div><div class="g-sub">${s.start} – ${s.end}</div></div>
+        ${S.prefs.columns.sender || S.prefs.columns.recipient ? `<div><div class="ell">${esc(S.vehicle(s.vehicle).name)}</div><div class="g-sub ell">${s.vehicles || 1} vehicle${(s.vehicles || 1) > 1 ? 's' : ''}</div></div>` : ''}
+        <div><div class="ell">${s.equipment.length ? s.equipment.map((e) => S.equipment(e.id).name).join(', ') : '—'}</div><div class="g-sub">Equipment</div></div>
         <div>${UI.shipPill(s.status)}</div>
       </div>`).join('')}
       <div class="show-all">${list.length > MAX ? `<a class="link" data-showall="${esc(key)}">${all ? ms('expand_less', 's18') + 'Show less' : ms('expand_more', 's18') + `Show all ${list.length} shipments`}</a><span class="faint">·</span>` : ''}<a class="link" data-open-group="${esc(g.key)}">${ms('open_in_new', 's16')}Open ${S.prefs.groupBy === 'wp' ? 'working package' : 'group'}</a>${g.wp && S.wpStatus(g.wp) !== 'completed' ? `<span class="faint">·</span><a class="link" data-add-ship="${g.wp.id}">${ms('add', 's16')}Add shipment</a>` : ''}</div>
@@ -199,26 +198,12 @@
     if (!groups.length) return emptyHtml();
     const cards = groups.map((g) => {
       const list = g.shipments;
-      const st = { total: list.length, appr: list.filter((s) => !['Open', 'Completed', 'Canceled', 'Rejected'].includes(s.status)).length, done: list.filter((s) => s.status === 'Completed').length, open: list.filter((s) => s.status === 'Open').length };
-      const tabColor = g.wp ? tradeColor(g.trade) : 'var(--olive)';
-      const tabText = g.wp ? g.trade : S.groupLabel(P.groupBy);
-      const bld = g.wp ? g.wp.building : agg(list, 'building'); const fl = g.wp ? g.wp.floor : agg(list, 'floor');
-      const who = g.wp ? g.wp.sender : g.sub;
-      return `<div class="fcard" data-group="${esc(g.key)}" tabindex="0">
-        <div class="ftab ${g.wp && tradeDark(g.trade) ? 'dark-t' : ''}" style="background:${tabColor}">${esc(tabText)}</div>
-        <div class="fbody">
-          <div class="ft"><span class="t" data-tip="${esc(g.title)}">${hl(g.title, P.search)}</span>${g.status ? `<span data-tip="Working package: ${WP_STATUS[g.status].label}">${ci(WP_STATUS[g.status].icon, 16)}</span>` : ''}</div>
-          <div class="fl">${ms('apartment')}${esc(bld)}</div>
-          <div class="fl">${ms('layers')}${esc(fl)}</div>
-          <div class="fl" style="color:var(--t1)">${g.from ? D.fmt(g.from) + ' – ' + D.fmt(g.to) : '—'}</div>
-          <div class="fsub ell">${esc(who)}</div>
-          <div class="fstats">
-            <span data-tip="Shipments">${ms('local_shipping', 's16')}${st.total}</span>
-            <span data-tip="Approved / in progress">${ci('legend-approved', 16)}${st.appr}</span>
-            <span data-tip="Completed">${ci('legend-completed', 16)}${st.done}</span>
-            <span data-tip="Open">${ci('legend-open', 16)}${st.open}</span>
-          </div>
-        </div></div>`;
+      const counts = { open: list.filter((s) => s.status === 'Open').length, approved: list.filter((s) => !['Open', 'Completed', 'Canceled', 'Rejected'].includes(s.status)).length, completed: list.filter((s) => s.status === 'Completed').length, draft: list.filter((s) => ['Canceled', 'Rejected'].includes(s.status)).length };
+      return UI.wpCard({
+        title: g.title, titleHtml: hl(g.title, P.search), trade: g.trade, tabLabel: g.wp ? g.trade : S.groupLabel(P.groupBy), tabColor: g.wp ? null : 'var(--color-action-primary)',
+        building: g.wp ? g.wp.building : agg(list, 'building'), floor: g.wp ? g.wp.floor : agg(list, 'floor'),
+        dates: g.from ? D.fmt(g.from) + ' - ' + D.fmt(g.to) : '—', sender: g.wp ? g.wp.sender : g.sub, counts, status: g.status, attrs: `data-group="${esc(g.key)}"`,
+      });
     }).join('');
     const add = P.groupBy === 'wp' ? `<div class="fcard add" data-add-wp tabindex="0"><div class="ftab"></div><div class="fbody">${ms('add', 's24')}Add working package</div></div>` : '';
     return `<div class="cards">${cards}${add}</div>`;
@@ -388,7 +373,7 @@
     root.querySelector('#propsBtn').classList.toggle('active', !!P.panel);
     root.querySelector('#propsBtn').innerHTML = ms('settings', P.panel ? 'fill' : '');
     if (!P.panel) { el.innerHTML = ''; el.className = ''; return; }
-    el.className = 'sidepanel'; el.style.cssText = 'margin-left:16px;border-radius:8px;box-shadow:var(--e-card);border:0;align-self:flex-start;position:sticky;top:132px';
+    el.className = 'sidepanel'; el.style.cssText = 'margin-left:16px;border-radius:8px;box-shadow:var(--e-card);border:0;align-self:flex-start;position:sticky;top:16px';
     const c = P.columns; const gl = S.groupLabel(P.groupBy);
     el.innerHTML = `
       <div class="sp-h"><h3>Properties</h3><button class="icon-btn" id="ppClose" data-tip="Close">${ms('close')}</button></div>
