@@ -19,6 +19,7 @@
   function render(view) {
     root = view;
     const P = S.prefs;
+    if (P.groupBy !== 'wp' && P.view !== 'list') { P.view = 'list'; S.savePrefs(); }
     view.innerHTML = `
     <div class="page hub">
       <div class="sticky-head">
@@ -35,9 +36,7 @@
           <div class="right">
             <span class="lbl-inline">Group by</span>
             <button class="dd-btn" id="groupBy"><span>${S.groupLabel(P.groupBy)}</span>${ms('expand_more')}</button>
-            <div class="itabs" role="tablist" aria-label="View">
-              ${[['timeline', 'view_timeline', 'Timeline'], ['list', 'view_list', 'List'], ['cards', 'view_module', 'Cards']].map(([k, ic, t]) => `<button class="itab ${P.view === k ? 'on' : ''}" data-view="${k}" data-tip="${t}" role="tab" aria-selected="${P.view === k}">${ms(ic)}</button>`).join('')}
-            </div>
+            <div class="vswitch" role="tablist" aria-label="View" id="vSwitch">${vswitchHtml()}</div>
             <button class="icon-btn ${P.panel ? 'active' : ''}" id="propsBtn" data-tip="Properties">${ms('settings')}</button>
           </div>
       </div>
@@ -51,6 +50,16 @@
     </div>`;
     bindShell();
     renderChips(); renderMain(); renderPanel();
+  }
+
+  const VIEWS = [['timeline', 'segment', 'Timeline'], ['list', 'format_list_bulleted', 'List'], ['cards', 'grid_on', 'Cards']];
+  function vswitchHtml() {
+    const P = S.prefs; const wpOnly = P.groupBy !== 'wp';
+    return VIEWS.map(([k, ic, t]) => { const off = wpOnly && k !== 'list'; return `<button class="vs ${P.view === k ? 'on' : ''}" data-view="${k}" ${off ? 'disabled' : ''} data-tip="${off ? t + ' is available when grouped by working package' : t}" role="tab" aria-selected="${P.view === k}">${ms(ic)}</button>`; }).join('');
+  }
+  function bindViews() {
+    const P = S.prefs;
+    root.querySelectorAll('[data-view]').forEach((b) => b.onclick = () => { if (b.disabled) return; P.view = b.dataset.view; S.savePrefs(); root.querySelector('#vSwitch').innerHTML = vswitchHtml(); bindViews(); renderMain(); renderPanel(); });
   }
 
   function createButton() {
@@ -69,14 +78,10 @@
     root.querySelector('#hubClear').onclick = () => { inp.value = ''; P.search = ''; S.savePrefs(); root.querySelector('#hubClear').classList.add('hidden'); renderMain(); inp.focus(); };
     bindCreate(root);
     root.querySelector('#addWpBar').onclick = () => WPFORM.open();
-    root.querySelectorAll('[data-view]').forEach((b) => b.onclick = () => {
-      P.view = b.dataset.view; S.savePrefs();
-      root.querySelectorAll('[data-view]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
-      renderMain(); renderPanel();
-    });
+    bindViews();
     root.querySelector('#groupBy').onclick = (e) => UI.menu(e.currentTarget, ['wp', 'destination', 'sender', 'recipient'].map((k) => ({
       label: S.groupLabel(k), icon: { wp: 'folder', destination: 'location_on', sender: 'outbox', recipient: 'move_to_inbox' }[k], on: P.groupBy === k,
-      onClick: () => { P.groupBy = k; S.savePrefs(); root.querySelector('#groupBy span').textContent = S.groupLabel(k); root.querySelector('#addWpBar').classList.toggle('hidden', k !== 'wp'); renderMain(); renderPanel(); },
+      onClick: () => { P.groupBy = k; if (k !== 'wp') P.view = 'list'; S.savePrefs(); root.querySelector('#groupBy span').textContent = S.groupLabel(k); root.querySelector('#addWpBar').classList.toggle('hidden', k !== 'wp'); root.querySelector('#vSwitch').innerHTML = vswitchHtml(); bindViews(); renderMain(); renderPanel(); },
     })), { minWidth: 220 });
     const lb = root.querySelector('#legendBtn');
     let hoverT;
@@ -98,18 +103,14 @@
   }
   document.addEventListener('mouseleave', (e) => { if (e.target.classList?.contains('legend-pop')) setTimeout(() => { if (!document.querySelector('#legendBtn:hover')) UI.closeFloat(); }, 150); }, true);
 
+  const WP_CHIPS = [['overdue', 'red', 'lg-overdue'], ['active', 'green', 'lg-active'], ['pending', 'grey', 'lg-pending'], ['completed', 'blue', 'lg-wpdone']];
   function renderChips() {
     const P = S.prefs; const c = S.countsByStatus();
     const el = root.querySelector('#hubChips');
-    el.innerHTML = `<button class="chip ${!P.wpStatus.length ? 'on' : ''}" data-st="">All<span class="n">${c.all}</span></button>` +
-      Object.entries(WP_STATUS).map(([k, w]) => `<button class="chip ${P.wpStatus.includes(k) ? 'on' : ''}" data-st="${k}" aria-pressed="${P.wpStatus.includes(k)}"><i class="dot" style="background:${UI.DOT[k]}"></i>${w.label}<span class="n">${c[k]}</span></button>`).join('');
-    el.querySelectorAll('.chip').forEach((b) => b.onclick = () => {
-      const k = b.dataset.st;
-      if (!k) P.wpStatus = [];
-      else {
-        P.wpStatus = P.wpStatus.includes(k) ? P.wpStatus.filter((x) => x !== k) : P.wpStatus.concat(k);
-        if (P.wpStatus.length === 4) P.wpStatus = [];
-      }
+    el.innerHTML = WP_CHIPS.map(([k, tone, ic]) => UI.checkChip({ key: k, label: WP_STATUS[k].label, count: c[k], checked: P.wpStatus.includes(k), tone, icon: UI.img(ic) })).join('');
+    el.querySelectorAll('[data-cc]').forEach((b) => b.onclick = () => {
+      const k = b.dataset.cc;
+      P.wpStatus = P.wpStatus.includes(k) ? P.wpStatus.filter((x) => x !== k) : P.wpStatus.concat(k);
       S.savePrefs(); renderChips(); renderMain();
     });
   }
@@ -264,9 +265,8 @@
       const ticks = list.filter((s) => D.diff(s.date, start) >= 0 && D.diff(s.date, end) <= 0).map((s) => `<i class="tl-tick" style="left:${pct(s.date) + (year ? 0 : 50 / days)}%;background:${SHIPMENT_STATUS[s.status].color}"></i>`).join('');
       const info = infoLine(vals); nRows++;
       rows += `<div class="tl-row" data-row>
-        <div class="tl-lcell g tl-left" data-group="${esc(g.key)}">
+        <div class="tl-lcell g tl-left" data-group="${esc(g.key)}">${g.wp ? `<i class="trade-bar" style="background:${tradeColor(g.trade)}"></i>` : ''}
           <button class="caret ${open ? 'open' : ''}" data-toggle="${esc(key)}" aria-expanded="${!!open}" data-tip="${open ? 'Hide' : 'Show'} shipments">${ms('chevron_right')}</button>
-          ${g.wp ? `<span class="dot-s" style="background:${tradeColor(g.trade)}"></span>` : ''}
           <div class="tt"><div class="t1" data-tip="${esc(g.title)}">${hl(g.title, q)}</div>${info ? `<div class="t2">${hl(info, q)}</div>` : ''}</div>
           <span class="count">${list.length}</span>
         </div>
@@ -296,12 +296,10 @@
         }
       }
     });
-    const legend = ['Open', 'Approved', 'Waiting', 'In Transit', 'Completed', 'Canceled'].map((k) => `<span class="lgd"><i class="sw" style="background:${SHIPMENT_STATUS[k].color}"></i>${k}</span>`).join('');
     return `<div class="tl">
       <div class="tl-bar">
         <button class="btn text today" id="tlToday">TODAY</button>
-        <button class="icon-btn" id="tlCal" data-tip="Pick a date">${ms('calendar_month')}</button>
-        <span class="sp"></span>
+        <button class="icon-btn" id="tlCal" data-tip="Pick a date">${ms('calendar_today')}</button>
         <button class="icon-btn" id="tlPrev" data-tip="Previous ${year ? '3 months' : '4 weeks'}" style="color:var(--olive)">${ms('chevron_left')}</button>
         <span class="tl-range">${D.fmt(start)} – ${D.fmt(end)} (${year ? '1Y' : '4W'})</span>
         <button class="icon-btn" id="tlNext" data-tip="Next ${year ? '3 months' : '4 weeks'}" style="color:var(--olive)">${ms('chevron_right')}</button>
@@ -310,7 +308,7 @@
         <button class="btn text neutral" id="tlExpand">${ms(anyOpen(groups) ? 'unfold_less' : 'unfold_more')}${anyOpen(groups) ? 'Collapse all' : 'Expand all'}</button>
       </div>
       ${groups.length ? `<div class="tl-grid ${dayW}" id="tlGrid" style="grid-template-columns:${leftW}px minmax(${year ? nW * 20 : days * 16}px, 1fr);grid-template-rows:repeat(${nRows}, max-content) minmax(0, 1fr)">${head}${rows}<div class="tl-row"><div class="tl-left tl-fill"></div><div class="tl-rcell tl-fill">${bg}</div></div></div>` : emptyHtml()}
-      <div class="tl-foot"><span>Shipment status:</span>${legend}</div>
+
     </div>`;
   }
   function anyOpen(groups) { return groups.some((g) => S.prefs.expanded[S.prefs.groupBy + ':' + g.key]); }
@@ -325,7 +323,7 @@
       const sa = t.closest('[data-showall]'); if (sa) { showAll[sa.dataset.showall] = !showAll[sa.dataset.showall]; renderMain(); return; }
       const add = t.closest('[data-add-ship]'); if (add) { e.stopPropagation(); CREATE.start({ wpId: add.dataset.addShip || null }); return; }
       if (t.closest('[data-add-wp]')) { WPFORM.open(); return; }
-      if (t.closest('[data-reset-filters]')) { P.search = ''; P.wpStatus = []; S.savePrefs(); render(root); return; }
+      if (t.closest('[data-reset-filters]')) { P.search = ''; P.wpStatus = ['overdue', 'active', 'pending', 'completed']; S.savePrefs(); render(root); return; }
       const j = t.closest('[data-jump]'); if (j) { e.stopPropagation(); P.rangeStart = D.add(D.monday(j.dataset.jump), -7 * (P.period >= 52 ? 13 : 1)); S.savePrefs(); renderMain(); flash(); return; }
       const sh = t.closest('[data-ship]'); if (sh) { UI.go('#/shipment/' + sh.dataset.ship); return; }
       const g = t.closest('[data-open-group]') || t.closest('[data-group]'); if (g) { openGroup(g.dataset.openGroup || g.dataset.group); }

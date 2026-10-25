@@ -190,7 +190,14 @@
       </div></div>`;
   }
 
+  /* Check chip — CLM chip style (checkbox + icon + zero-padded count + label, tinted by status) */
+  const pad2 = (n) => String(n).padStart(2, '0');
+  function checkChip({ key, label, count, checked, tone, icon }) {
+    return `<button class="cchip ${tone} ${checked ? 'on' : ''}" data-cc="${key}" aria-pressed="${!!checked}"><span class="cbx"></span>${icon || ''}<span class="cc-t">${pad2(count)} ${label}</span></button>`;
+  }
+  const img = (name, size = 20) => `<img src="assets/fig/${name}.svg" width="${size}" height="${size}" alt="">`;
+
   function go(hash) { if (location.hash === hash) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = hash; }
 
-  window.UI = { wx, wpCard, DOT, esc, ms, ci, initials, hl, dt, isDark, wpPill, wpIcon, shipPill, shipIcon, tradeColor, tradeDark, menu, float, closeFloat, place, toast, modal, confirm, lightbox, pickFiles, fileSize, go };
+  window.UI = { checkChip, img, wx, wpCard, DOT, esc, ms, ci, initials, hl, dt, isDark, wpPill, wpIcon, shipPill, shipIcon, tradeColor, tradeDark, menu, float, closeFloat, place, toast, modal, confirm, lightbox, pickFiles, fileSize, go };
 })();

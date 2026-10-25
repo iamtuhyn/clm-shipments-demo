@@ -21,11 +21,21 @@
   // only show nav tooltips when collapsed
   items.addEventListener('mouseover', (e) => { const a = e.target.closest('.sn-item'); if (a && !app.classList.contains('nav-collapsed')) a.removeAttribute('data-tip'); else if (a) a.dataset.tip = a.textContent.trim(); });
 
-  const SITES = [['Augustana College', 'Bradly Construction Project'], ['Zürich Airport · Dock B', 'Terminal Extension'], ['Circle Zürich', 'Hotel & Retail Block']];
-  document.getElementById('siteSelect').onclick = (e) => UI.menu(e.currentTarget, SITES.map(([n, p], i) => ({
-    label: `${n} — ${p}`, icon: 'location_city', on: i === 0,
-    onClick: () => { if (i) UI.toast(`Only <b>${esc(SITES[0][0])}</b> has demo data. Other sites are not part of this demo.`, { icon: 'info' }); },
-  })), { minWidth: 320 });
+  // Site switcher — CLM Figma 26049:55842 (search + site list, selected site in olive with check)
+  const SITES = [['All Sites', 'All projects'], ['Aerial View Site', 'Coopers'], ['Augustana College', 'Bradly Construction Project'], ['Construction site 01', 'LYDL'], ['Construction site 002', 'Coopers'], ['1000 Org Construction', 'Grace Pacific']];
+  const CURRENT = 'Augustana College';
+  document.getElementById('siteSelect').onclick = (e) => {
+    const anchor = e.currentTarget;
+    const el = UI.float(anchor, `<div class="ss-search input-icon">${ms('search')}<input class="input" placeholder="Search sites" id="ssQ" autocomplete="off"></div><div class="ss-list" id="ssList"></div>`, { cls: 'site-pop' });
+    if (!el) return;
+    el.style.width = anchor.getBoundingClientRect().width + 'px'; UI.place(el, anchor, 'left', 4);
+    const draw = (q = '') => {
+      const list = SITES.filter(([n, p]) => (n + ' ' + p).toLowerCase().includes(q.toLowerCase()));
+      el.querySelector('#ssList').innerHTML = list.map(([n, p]) => `<button class="ss-item ${n === CURRENT ? 'on' : ''}" data-site="${esc(n)}"><span class="grow"><b>${esc(n)}</b><small>${esc(p)}</small></span>${n === CURRENT ? ms('check', 's24') : ''}</button>`).join('') || '<div class="cap" style="padding:12px 16px">No site found</div>';
+    };
+    draw(); el.querySelector('#ssQ').oninput = (ev) => draw(ev.target.value); setTimeout(() => el.querySelector('#ssQ').focus(), 30);
+    el.onclick = (ev) => { const b = ev.target.closest('[data-site]'); if (!b) return; UI.closeFloat(); if (b.dataset.site !== CURRENT) UI.toast(`Only <b>${esc(CURRENT)}</b> has demo data. Other sites are not part of this demo.`, { icon: 'info' }); };
+  };
   document.getElementById('langBtn').onclick = (e) => UI.menu(e.currentTarget, [['EN', 'English'], ['DE', 'Deutsch'], ['FR', 'Français'], ['IT', 'Italiano']].map(([c, l], i) => ({
     label: l, hint: c, on: i === 0, onClick: () => { if (i) UI.toast('Translations are not part of this demo.', { icon: 'translate' }); },
   })), { align: 'right' });

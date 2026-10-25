@@ -5,10 +5,10 @@
   const { D, WP_STATUS } = CLM;
   const { esc, ms, hl, tradeColor, tradeDark } = UI;
   const BUCKETS = [
-    { k: 'open', label: 'Open', dot: 'var(--color-raisin-300)', test: (s) => s.status === 'Open' },
-    { k: 'approved', label: 'Approved', dot: 'var(--color-action-primary)', test: (s) => !['Open', 'Completed', 'Canceled', 'Rejected'].includes(s.status) },
-    { k: 'completed', label: 'Completed', dot: 'var(--color-data-12)', test: (s) => s.status === 'Completed' },
-    { k: 'canceled', label: 'Canceled', dot: 'var(--color-status-error-fg)', test: (s) => ['Canceled', 'Rejected'].includes(s.status) },
+    { k: 'open', label: 'Open', tone: 'grey', icon: 'lg-open', test: (s) => s.status === 'Open' },
+    { k: 'approved', label: 'Approved', tone: 'olive', icon: 'lg-approved', test: (s) => !['Open', 'Completed', 'Canceled', 'Rejected'].includes(s.status) },
+    { k: 'completed', label: 'Completed', tone: 'blue', icon: 'lg-completed', test: (s) => s.status === 'Completed' },
+    { k: 'canceled', label: 'Canceled', tone: 'red', icon: null, test: (s) => ['Canceled', 'Rejected'].includes(s.status) },
   ];
   const STATUS_TXT = { overdue: ['warning', 'var(--color-status-error-fg)'], active: ['fiber_manual_record', 'var(--color-status-success-fg)'], pending: ['schedule', 'var(--color-raisin-300)'], completed: ['library_add_check', 'var(--color-data-12)'] };
   let st = null;
@@ -16,8 +16,9 @@
   function render(view, by, key) {
     const wp = by === 'wp' ? S.wp(key) : null;
     if (by === 'wp' && !wp) { view.innerHTML = `<div class="page"><div class="na-page"><div>${ms('folder_off')}<h2>Working package not found</h2><a class="btn" href="#/shipments">Back to Shipments</a></div></div></div>`; return; }
-    if (!st || st.id !== by + key) st = { id: by + key, on: [], view: st?.view || 'cards', q: {} };
-    const pass = (s) => !st.on.length || BUCKETS.some((b) => st.on.includes(b.k) && b.test(s));
+    if (!st || st.id !== by + key) st = { id: by + key, on: BUCKETS.map((b) => b.k), view: st?.view || 'cards', q: {} };
+    if (by !== 'wp') st.view = 'list'; // cards are only available for working packages
+    const pass = (s) => BUCKETS.some((b) => st.on.includes(b.k) && b.test(s));
     const all = by === 'wp' ? S.shipmentsOf(key) : S.data.SHIPMENTS.filter((s) => S.groupKey(s, by) === key).sort((a, b) => a.date.localeCompare(b.date));
     const counts = Object.fromEntries(BUCKETS.map((b) => [b.k, all.filter(b.test).length]));
     const status = wp ? S.wpStatus(wp) : null;
@@ -37,14 +38,14 @@
 
     view.innerHTML = `
     <div class="page gpage">
-      <div class="sticky-head gh" style="--accent:${accent}">
+      <div class="sticky-head gh">
         <div class="gh-top">
           <button class="back" id="gBack" data-tip="Back">${ms('arrow_back')}</button>
           <span class="ms gh-ic" style="color:${accent}">${icon}</span>
           <h1 class="ell">${esc(wp ? wp.title : key)}</h1>${statusChip}
           <span class="sp"></span>
-          ${wp ? `<button class="btn text" id="gEdit">${ms('edit')}Edit</button><button class="icon-btn" id="gMore" data-tip="More actions">${ms('more_vert')}</button>` : ''}
-          ${!wp || status !== 'completed' ? `<button class="btn primary" id="gAdd">${ms('add')}Add shipment</button>` : ''}
+          ${wp ? `<button class="btn text" id="gEdit">${ms('edit')}Edit</button>` : ''}
+          ${!wp || status !== 'completed' ? `<button class="btn primary" id="gAdd">${ms('add')}Shipment</button>` : ''}
         </div>
         <div class="gh-grid">${facts}</div>
         <div class="gh-prog"><div class="progress"><i style="width:${pct}%"></i></div><span>${done} of ${all.length} shipments completed</span></div>
@@ -52,7 +53,7 @@
           <span class="gh-lbl">Shipments</span>
           <div class="chips" id="gChips"></div>
           <span class="sp"></span>
-          <div class="itabs" role="tablist">${[['list', 'view_list', 'List'], ['cards', 'view_module', 'Cards']].map(([k, ic, t]) => `<button class="itab ${st.view === k ? 'on' : ''}" data-v="${k}" data-tip="${t}">${ms(ic)}</button>`).join('')}</div>
+          <div class="vswitch" role="tablist">${[['list', 'format_list_bulleted', 'List'], ['cards', 'grid_on', 'Cards']].map(([k, ic, t]) => `<button class="vs ${st.view === k ? 'on' : ''}" data-v="${k}" ${by !== 'wp' && k === 'cards' ? `disabled data-tip="Cards are available for working packages"` : `data-tip="${t}"`}>${ms(ic)}</button>`).join('')}</div>
         </div>
       </div>
       <div class="gbody" id="gBody"></div>
@@ -61,8 +62,8 @@
     const draw = () => {
       const list = all.filter(pass);
       const chips = view.querySelector('#gChips');
-      chips.innerHTML = `<button class="chip ${!st.on.length ? 'on' : ''}" data-b="">All<span class="n">${all.length}</span></button>` + BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).map((b) => `<button class="chip ${st.on.includes(b.k) ? 'on' : ''}" data-b="${b.k}"><i class="dot" style="background:${b.dot}"></i>${b.label}<span class="n">${counts[b.k]}</span></button>`).join('');
-      chips.querySelectorAll('[data-b]').forEach((c) => c.onclick = () => { const k = c.dataset.b; st.on = !k ? [] : st.on.includes(k) ? st.on.filter((x) => x !== k) : st.on.concat(k); if (st.on.length === BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).length) st.on = []; draw(); });
+      chips.innerHTML = BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).map((b) => UI.checkChip({ key: b.k, label: b.label, count: counts[b.k], checked: st.on.includes(b.k), tone: b.tone, icon: b.icon ? UI.img(b.icon) : `<span class="ci" style="width:20px;height:20px;color:var(--color-status-error-fg)">${CLM_ICONS['sm-canceled']}</span>` })).join('');
+      chips.querySelectorAll('[data-cc]').forEach((c) => c.onclick = () => { const k = c.dataset.cc; st.on = st.on.includes(k) ? st.on.filter((x) => x !== k) : st.on.concat(k); draw(); });
       view.querySelector('#gBody').innerHTML = !all.length ? emptyHtml(wp, status, 'No shipments in this working package yet.')
         : !list.length ? emptyHtml(null, null, 'No shipments match the selected status.')
           : st.view === 'cards' ? `<div class="scards">${list.map(cardHtml).join('')}</div>` : tableHtml(list, by);
@@ -70,11 +71,10 @@
     };
     draw();
 
-    view.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { st.view = b.dataset.v; view.querySelectorAll('[data-v]').forEach((x) => x.classList.toggle('on', x === b)); draw(); });
+    view.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { if (b.disabled) return; st.view = b.dataset.v; view.querySelectorAll('[data-v]').forEach((x) => x.classList.toggle('on', x === b)); draw(); });
     view.querySelector('#gBack').onclick = () => goBack();
     view.querySelector('#gAdd')?.addEventListener('click', () => CREATE.start({ wpId: wp ? wp.id : null }));
     view.querySelector('#gEdit')?.addEventListener('click', () => WPFORM.open(wp));
-    view.querySelector('#gMore')?.addEventListener('click', (e) => moreMenu(e.currentTarget, wp, all, () => render(view, by, key)));
   }
 
   function emptyHtml(wp, status, text) {
@@ -130,31 +130,10 @@
     body.onkeydown = (e) => { if (e.key === 'Enter' && e.target.matches('.scard')) e.target.click(); };
     body.querySelectorAll('[data-q]').forEach((inp) => inp.oninput = () => {
       st.q[inp.dataset.q] = inp.value; const k = inp.dataset.q; const pos = inp.selectionStart;
-      const list = (by === 'wp' ? S.shipmentsOf(key) : S.data.SHIPMENTS.filter((s) => S.groupKey(s, by) === key)).filter((s) => !st.on.length || BUCKETS.some((b) => st.on.includes(b.k) && b.test(s)));
+      const list = (by === 'wp' ? S.shipmentsOf(key) : S.data.SHIPMENTS.filter((s) => S.groupKey(s, by) === key)).filter((s) => BUCKETS.some((b) => st.on.includes(b.k) && b.test(s)));
       body.innerHTML = tableHtml(list); bindBody(view, by, key);
       const n = body.querySelector(`[data-q="${k}"]`); n.focus(); n.setSelectionRange(pos, pos);
     });
-  }
-
-  function moreMenu(anchor, wp, all, after) {
-    const status = S.wpStatus(wp);
-    UI.menu(anchor, [
-      { label: 'Add shipment', icon: 'add', disabled: status === 'completed', onClick: () => CREATE.start({ wpId: wp.id }) },
-      { label: 'Duplicate working package', icon: 'content_copy', onClick: () => {
-        const copy = Object.assign(JSON.parse(JSON.stringify(wp)), { id: 'wp' + Date.now(), title: wp.title + ' (copy)', completed: false });
-        S.data.WPS.push(copy); S.persist(); UI.go('#/group/wp/' + copy.id); UI.toast('Working package duplicated · shipments were not copied');
-      } },
-      wp.completed ? { label: 'Reopen working package', icon: 'lock_open', onClick: () => { wp.completed = false; S.persist(); after(); UI.toast('Working package reopened'); } }
-        : { label: 'Mark as completed', icon: 'library_add_check', onClick: async () => {
-          const openN = all.filter((s) => !['Completed', 'Canceled', 'Rejected'].includes(s.status)).length;
-          if (await UI.confirm({ title: 'Mark as completed?', text: openN ? `${openN} shipment${openN > 1 ? 's are' : ' is'} not completed yet. They stay as they are, but no new shipments can be added.` : 'No new shipments can be added afterwards. You can reopen it any time.', ok: 'Mark as completed' })) { wp.completed = true; S.persist(); after(); UI.toast('Working package completed'); }
-        } },
-      { sep: true },
-      { label: 'Delete working package', icon: 'delete', danger: true, onClick: async () => {
-        if (all.length) { UI.modal({ title: 'Can’t delete this working package', size: 'sm', body: `<p>It still has ${all.length} shipment${all.length > 1 ? 's' : ''}. Move or cancel them first, or mark the working package as completed.</p>`, actions: [{ label: 'OK', primary: true }] }); return; }
-        if (await UI.confirm({ title: 'Delete working package?', text: `“${esc(wp.title)}” will be deleted. This can’t be undone.`, ok: 'Delete', danger: true })) { S.data.WPS = S.data.WPS.filter((w) => w !== wp); S.persist(); UI.go('#/shipments'); UI.toast('Working package deleted'); }
-      } },
-    ], { align: 'right', minWidth: 260 });
   }
 
   /* row actions shared with other pages */

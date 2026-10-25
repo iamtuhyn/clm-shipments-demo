@@ -22,7 +22,7 @@
         <div class="u-steps">${['Select file', 'Check data', 'Import', 'Done'].map((l, i) => `${i ? `<span class="u-line ${i <= idx ? 'done' : ''}"></span>` : ''}<span class="u-step ${i < idx || st.stage === 'done' ? 'done' : i === idx ? 'cur' : ''}"><span class="bub">${i < idx || st.stage === 'done' ? ms('check', 's16') : i + 1}</span>${l}</span>`).join('')}</div>
         <div id="uStage">${stageHtml()}</div>
       </div>
-      <div class="card" id="uHistory">${historyHtml()}</div>
+      ${st.stage === 'select' ? `<div class="card" id="uHistory">${historyHtml()}</div>` : ''}
     </div>`;
     view.querySelector('#uBack').onclick = () => goBack();
     view.querySelector('#uSample').onclick = sample;
@@ -180,7 +180,7 @@
       <div class="pager"><span>Items per page ${per}</span><span>${(st.page - 1) * per + 1} – ${Math.min(st.page * per, all.length)} of ${all.length}</span><button class="icon-btn sm" data-pg="-1" ${st.page <= 1 ? 'disabled style="opacity:.3"' : ''}>${ms('chevron_left')}</button><button class="icon-btn sm" data-pg="1" ${st.page >= pages ? 'disabled style="opacity:.3"' : ''}>${ms('chevron_right')}</button></div>`;
   }
   function bindHistory() {
-    const h = view.querySelector('#uHistory');
+    const h = view.querySelector('#uHistory'); if (!h) return;
     h.querySelectorAll('[data-pg]').forEach((b) => b.onclick = () => { st.page += +b.dataset.pg; h.innerHTML = historyHtml(); bindHistory(); });
     h.querySelectorAll('[data-u]').forEach((r) => r.onclick = () => {
       const u = S.data.UPLOADS.find((x) => x.id === r.dataset.u);

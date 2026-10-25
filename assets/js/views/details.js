@@ -13,7 +13,7 @@
     const counts = { documents: s.docs.length + s.photos.length, annotations: s.annotations.length, activity: s.activity.length };
     v.innerHTML = `
     <div class="page">
-      <div class="sticky-head">
+      <div class="sticky-head has-tabs">
         <div class="page-head" style="padding-bottom:6px">
           <button class="back" id="dBack" data-tip="Back">${ms('arrow_back')}</button>
           <div class="grow">
