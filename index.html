@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLM · Shipments</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23969300'/%3E%3Cpath d='M8 21v-9h11v9zm11-6h3l3 3v3h-6z' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..24,400,0..1,0&display=block" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidenav" id="sidenav">
+    <div class="sn-head">
+      <div class="sn-logo" id="snLogo"></div>
+      <button class="sn-burger" id="snBurger" data-tip="Collapse menu" data-tip-pos="right"><span class="ms">menu</span></button>
+    </div>
+    <nav class="sn-items" id="snItems"></nav>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="tb-site">
+        <label>Site:</label>
+        <button class="site-select" id="siteSelect">
+          <span><b id="siteName">Augustana College</b><small id="siteProject">Bradly Construction Project</small></span>
+          <span class="ms">expand_more</span>
+        </button>
+      </div>
+      <div class="tb-right">
+        <div class="tb-tz" data-tip="All times are shown in the site time zone"><span><small>Site time zone</small>Europe/Zurich</span><span class="ms">public</span></div>
+        <button class="tb-lang" id="langBtn">EN <span class="ms">expand_more</span></button>
+        <span class="tb-sep"></span>
+        <button class="tb-icon" id="bellBtn" data-tip="Notifications"><span class="ms">notifications</span><i class="dot" id="bellDot"></i></button>
+        <span class="tb-sep"></span>
+        <button class="tb-avatar" id="avatarBtn" data-tip="Max Mustermann"><img src="assets/img/avatar.jpg" alt=""></button>
+        <span class="tb-sep"></span>
+        <img class="tb-client" src="assets/img/zurich-airport.png" alt="Zürich Airport">
+      </div>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+<div id="layer"></div>
+<div id="toasts"></div>
+<div id="tip" class="tip"></div>
+
+<script src="assets/js/icons-clm.js"></script>
+<script src="assets/js/data.js"></script>
+<script src="assets/js/store.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/views/hub.js"></script>
+<script src="assets/js/views/group.js"></script>
+<script src="assets/js/views/details.js"></script>
+<script src="assets/js/views/create.js"></script>
+<script src="assets/js/views/wp.js"></script>
+<script src="assets/js/views/upload.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
