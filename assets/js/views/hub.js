@@ -55,7 +55,7 @@
   const VIEWS = [['timeline', 'segment', 'Timeline'], ['list', 'format_list_bulleted', 'List'], ['cards', 'grid_on', 'Cards']];
   function vswitchHtml() {
     const P = S.prefs; const wpOnly = P.groupBy !== 'wp';
-    return VIEWS.map(([k, ic, t]) => { const off = wpOnly && k !== 'list'; return `<button class="vs ${P.view === k ? 'on' : ''}" data-view="${k}" ${off ? 'disabled' : ''} data-tip="${off ? t + ' is available when grouped by working package' : t}" role="tab" aria-selected="${P.view === k}">${ms(ic)}</button>`; }).join('');
+    return VIEWS.map(([k, ic, t]) => { const off = wpOnly && k !== 'list'; return `<button class="vs ${P.view === k ? 'on' : ''}" data-view="${k}" ${off ? 'disabled' : ''} data-tip="${off ? 'Working packages only' : t}" role="tab" aria-selected="${P.view === k}">${ms(ic)}</button>`; }).join('');
   }
   function bindViews() {
     const P = S.prefs;
@@ -104,13 +104,16 @@
   document.addEventListener('mouseleave', (e) => { if (e.target.classList?.contains('legend-pop')) setTimeout(() => { if (!document.querySelector('#legendBtn:hover')) UI.closeFloat(); }, 150); }, true);
 
   const WP_CHIPS = [['overdue', 'red', 'lg-overdue'], ['active', 'green', 'lg-active'], ['pending', 'grey', 'lg-pending'], ['completed', 'blue', 'lg-wpdone']];
+  // Status chips: All + statuses; picking a status deselects All, several statuses can be combined
   function renderChips() {
     const P = S.prefs; const c = S.countsByStatus();
     const el = root.querySelector('#hubChips');
-    el.innerHTML = WP_CHIPS.map(([k, tone, ic]) => UI.checkChip({ key: k, label: WP_STATUS[k].label, count: c[k], checked: P.wpStatus.includes(k), tone, icon: UI.img(ic) })).join('');
+    el.innerHTML = UI.checkChip({ key: '', label: 'All', count: c.all, checked: !P.wpStatus.length, tone: 'olive' }) +
+      WP_CHIPS.map(([k, tone, ic]) => UI.checkChip({ key: k, label: WP_STATUS[k].label, count: c[k], checked: P.wpStatus.includes(k), tone, icon: UI.img(ic) })).join('');
     el.querySelectorAll('[data-cc]').forEach((b) => b.onclick = () => {
       const k = b.dataset.cc;
-      P.wpStatus = P.wpStatus.includes(k) ? P.wpStatus.filter((x) => x !== k) : P.wpStatus.concat(k);
+      if (!k) P.wpStatus = [];
+      else { P.wpStatus = P.wpStatus.includes(k) ? P.wpStatus.filter((x) => x !== k) : P.wpStatus.concat(k); if (P.wpStatus.length === WP_CHIPS.length) P.wpStatus = []; }
       S.savePrefs(); renderChips(); renderMain();
     });
   }
@@ -323,7 +326,7 @@
       const sa = t.closest('[data-showall]'); if (sa) { showAll[sa.dataset.showall] = !showAll[sa.dataset.showall]; renderMain(); return; }
       const add = t.closest('[data-add-ship]'); if (add) { e.stopPropagation(); CREATE.start({ wpId: add.dataset.addShip || null }); return; }
       if (t.closest('[data-add-wp]')) { WPFORM.open(); return; }
-      if (t.closest('[data-reset-filters]')) { P.search = ''; P.wpStatus = ['overdue', 'active', 'pending', 'completed']; S.savePrefs(); render(root); return; }
+      if (t.closest('[data-reset-filters]')) { P.search = ''; P.wpStatus = []; S.savePrefs(); render(root); return; }
       const j = t.closest('[data-jump]'); if (j) { e.stopPropagation(); P.rangeStart = D.add(D.monday(j.dataset.jump), -7 * (P.period >= 52 ? 13 : 1)); S.savePrefs(); renderMain(); flash(); return; }
       const sh = t.closest('[data-ship]'); if (sh) { UI.go('#/shipment/' + sh.dataset.ship); return; }
       const g = t.closest('[data-open-group]') || t.closest('[data-group]'); if (g) { openGroup(g.dataset.openGroup || g.dataset.group); }

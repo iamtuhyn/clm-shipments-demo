@@ -292,7 +292,7 @@
       <div class="row" style="margin-bottom:12px"><div class="chips">${['All', 'Pinned', 'Bulk', 'Pallets'].map((f) => `<button class="chip filled ${matFilter === f ? 'on' : ''}" data-mf="${f}">${f}</button>`).join('')}</div><span class="sp"></span><div class="input-icon" style="width:240px">${ms('search')}<input class="input" id="matQ" placeholder="Search material" value="${esc(matSearch)}"></div></div>
       <div class="sel-grid" style="grid-template-columns:repeat(6,1fr)">
         <div class="stile add-stile" id="matNew">${ms('add', 's24')}<b>Add new</b></div>
-        ${show.map((m) => { const s = sel(m.id); return `<div class="stile ${s ? 'on' : ''}" data-mat="${m.id}">${ms('widgets', 's24')}<b>${esc(m.name)}</b><small>Unit: ${esc(m.unit)}</small>${s ? `<span class="pill olive">${s.qty} ${esc(s.unit)}</span>` : ''}</div>`; }).join('')}
+        ${show.map((m) => { const s = sel(m.id); return `<div class="stile ${s ? 'on' : ''}" data-mat="${m.id}"><b>${esc(m.name)}</b><small>Unit: ${esc(m.unit)}</small>${s ? `<span class="pill olive">${s.qty} ${esc(s.unit)}</span>` : ''}</div>`; }).join('')}
       </div>
       ${list.length > 11 && matFilter === 'All' && !q ? `<a class="link" id="matMore" style="margin-top:10px">${ms(d.showAllMat ? 'expand_less' : 'expand_more', 's18')}${d.showAllMat ? 'Show fewer' : `See all materials (${list.length})`}</a>` : ''}
       ${!list.length ? `<div class="cap" style="margin-top:8px">No material found. <a class="link" id="matNew2">Add “${esc(matSearch)}”</a></div>` : ''}

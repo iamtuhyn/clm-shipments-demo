@@ -11,14 +11,14 @@
   function save(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { /* private mode */ } }
 
   const defaultPrefs = () => ({
-    view: 'timeline', groupBy: 'wp', wpStatus: ['overdue', 'active', 'pending', 'completed'], search: '',
+    view: 'timeline', groupBy: 'wp', wpStatus: [], search: '',
     period: 4, showCompleted: true, columns: { sender: true, recipient: true, building: true, floor: true },
     rangeStart: D.add(D.monday(D.today), -14), expanded: { 'wp:wp1': true }, navCollapsed: false,
   });
 
   const S = {
     data: load(KEY, null) || clone(CLM_SEED),
-    prefs: (() => { const p = Object.assign(defaultPrefs(), load(PREFS_KEY, {})); if (![4, 52].includes(p.period)) { p.period = 4; p.rangeStart = D.add(D.monday(D.today), -14); } if (!Array.isArray(p.wpStatus) || !p.wpStatus.length) p.wpStatus = ['overdue', 'active', 'pending', 'completed']; return p; })(),
+    prefs: (() => { const p = Object.assign(defaultPrefs(), load(PREFS_KEY, {})); if (![4, 52].includes(p.period)) { p.period = 4; p.rangeStart = D.add(D.monday(D.today), -14); } if (!Array.isArray(p.wpStatus) || p.wpStatus.length === 4) p.wpStatus = []; return p; })(),
     persist() { save(KEY, S.data); },
     savePrefs() { save(PREFS_KEY, S.prefs); },
     reset() {
@@ -74,7 +74,7 @@
     groups(opts = {}) {
       const p = Object.assign({}, S.prefs, opts);
       const q = (p.search || '').trim().toLowerCase();
-      const statusOk = (wp) => p.wpStatus.includes(S.wpStatus(wp));
+      const statusOk = (wp) => !p.wpStatus.length || p.wpStatus.includes(S.wpStatus(wp));
       const map = new Map();
       if (p.groupBy === 'wp') {
         S.data.WPS.forEach((wp) => {

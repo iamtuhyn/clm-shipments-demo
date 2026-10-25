@@ -193,9 +193,29 @@
   /* Check chip — CLM chip style (checkbox + icon + zero-padded count + label, tinted by status) */
   const pad2 = (n) => String(n).padStart(2, '0');
   function checkChip({ key, label, count, checked, tone, icon }) {
-    return `<button class="cchip ${tone} ${checked ? 'on' : ''}" data-cc="${key}" aria-pressed="${!!checked}"><span class="cbx"></span>${icon || ''}<span class="cc-t">${pad2(count)} ${label}</span></button>`;
+    return `<button class="cchip ${tone} ${checked ? 'on' : ''}" data-cc="${key}" aria-pressed="${!!checked}">${icon || ''}<span class="cc-t">${pad2(count)} ${label}</span></button>`;
   }
   const img = (name, size = 20) => `<img src="assets/fig/${name}.svg" width="${size}" height="${size}" alt="">`;
+
+  /* Form dropdown — CLM Figma 31468:83736. Replaces the browser's native list for every <select class="select">.
+     The native select stays in the DOM (hidden) as the value holder, so existing change handlers keep working. */
+  function enhanceSelect(sel) {
+    if (sel._dd) return; sel._dd = true;
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'cselect';
+    const sync = () => { const o = sel.options[sel.selectedIndex]; btn.innerHTML = `<span class="${!o || !o.value ? 'ph' : ''}">${esc(o ? o.text : '')}</span>`; btn.disabled = sel.disabled; };
+    sync(); sel.after(btn); sel.classList.add('select-native');
+    btn.onclick = () => {
+      const opts = [...sel.options];
+      const el = float(btn, opts.map((o, i) => `<button type="button" class="dd-i ${i === sel.selectedIndex && o.value ? 'on' : ''} ${!o.value ? 'ph' : ''}" data-i="${i}" ${o.disabled ? 'disabled' : ''}><span>${esc(o.text)}</span>${i === sel.selectedIndex && o.value ? `<img src="assets/fig/dd-check.svg" width="16" height="16" alt="">` : ''}</button>`).join(''), { cls: 'dd-pop' });
+      if (!el) return;
+      el.style.width = btn.getBoundingClientRect().width + 'px'; place(el, btn, 'left', 2);
+      el.querySelector('.dd-i.on')?.scrollIntoView({ block: 'nearest' });
+      el.onclick = (e) => { const b = e.target.closest('[data-i]'); if (!b || b.disabled) return; sel.selectedIndex = +b.dataset.i; closeFloat(); sync(); sel.dispatchEvent(new Event('input', { bubbles: true })); sel.dispatchEvent(new Event('change', { bubbles: true })); };
+    };
+    sel.addEventListener('change', sync);
+  }
+  const enhanceAll = (root) => root.querySelectorAll && root.querySelectorAll('select.select').forEach(enhanceSelect);
+  new MutationObserver((ms_) => ms_.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) { if (n.matches?.('select.select')) enhanceSelect(n); enhanceAll(n); } }))).observe(document.body, { childList: true, subtree: true });
 
   function go(hash) { if (location.hash === hash) window.dispatchEvent(new HashChangeEvent('hashchange')); else location.hash = hash; }
 

@@ -282,7 +282,7 @@ textarea.input { height: auto; min-height: 96px; padding: 8px 12px; resize: vert
 .progress i.b { background: var(--olive-200); }
 
 /* ---------------- menus (DS Select/Option · elevation/dropdown) ---------------- */
-#layer { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+#layer { position: fixed; inset: 0; pointer-events: none; z-index: 75; }
 #layer > * { pointer-events: auto; }
 .menu { position: fixed; min-width: 220px; background: #fff; border-radius: var(--radius-large); box-shadow: var(--elevation-dropdown); padding: 8px 0; z-index: 60; animation: pop .12s ease-out; max-height: 70vh; overflow: auto; }
 .menu .mi { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; height: 48px; text-align: left; white-space: nowrap; font-size: 14px; line-height: 18px; letter-spacing: .5px; color: var(--t1); }
@@ -732,17 +732,15 @@ mark { background: #FFEECC; color: inherit; border-radius: 2px; padding: 0 1px; 
 /* tabs sit on the header's bottom edge: the header's 2px border is the one continuous track */
 .sticky-head.has-tabs { border-bottom: 2px solid var(--border); }
 
-/* ---------------- check chips — CLM chip style (final) ---------------- */
-.cchip { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 12px; border-radius: var(--radius-small); font-size: 14px; font-weight: 500; letter-spacing: .1px; white-space: nowrap; transition: filter .12s; }
-.cchip:hover { filter: brightness(.97); }
-.cchip .cbx { width: 18px; height: 18px; border-radius: 2px; border: 2px solid currentColor; background: #fff; display: grid; place-items: center; flex: none; }
-.cchip.on .cbx::after { content: ''; width: 5px; height: 10px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+/* ---------------- status chips — CLM chip style: icon + count + label; selected = status tint, unselected = white ---------------- */
+.cchip { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 12px; border-radius: var(--radius-small); border: 1px solid var(--border); background: #fff; font-size: 14px; font-weight: 500; letter-spacing: .1px; white-space: nowrap; transition: background .12s, border-color .12s; }
+.cchip:hover { background: var(--color-action-outline-hover); }
 .cchip img, .cchip .ci { display: block; flex: none; }
-.cchip.grey { background: #F7F7F7; color: #939399; } .cchip.grey .cbx { border-color: #939399; } .cchip.grey.on .cbx { background: #474752; border-color: #474752; }
-.cchip.olive { background: var(--color-surface-selected); color: var(--color-action-primary); } .cchip.olive.on .cbx { background: var(--color-action-primary); border-color: var(--color-action-primary); }
-.cchip.blue { background: rgba(46,96,170,.2); color: var(--color-data-12); } .cchip.blue .cbx { border-color: #939399; } .cchip.blue.on .cbx { background: var(--color-data-12); border-color: var(--color-data-12); }
-.cchip.red { background: #FBEDEB; color: var(--color-status-error-fg); } .cchip.red.on .cbx { background: var(--color-status-error-fg); border-color: var(--color-status-error-fg); }
-.cchip.green { background: #E6F4EC; color: #2F7D52; } .cchip.green.on .cbx { background: #36A162; border-color: #36A162; }
+.cchip.grey { color: #939399; } .cchip.grey.on { background: #F7F7F7; border-color: #F7F7F7; }
+.cchip.olive { color: var(--color-action-primary); } .cchip.olive.on { background: var(--color-surface-selected); border-color: var(--color-surface-selected); }
+.cchip.blue { color: var(--color-data-12); } .cchip.blue.on { background: rgba(46,96,170,.2); border-color: transparent; }
+.cchip.red { color: var(--color-status-error-fg); } .cchip.red.on { background: #FBEDEB; border-color: #FBEDEB; }
+.cchip.green { color: #2F7D52; } .cchip.green.on { background: #E6F4EC; border-color: #E6F4EC; }
 .chips { gap: 12px; }
 
 /* ---------------- view switcher (attachment design) ---------------- */
@@ -769,3 +767,25 @@ mark { background: #FFEECC; color: inherit; border-radius: 2px; padding: 0 1px; 
 .ss-item small { display: block; font-size: 12px; line-height: 1.44; letter-spacing: .2px; color: var(--t2); }
 .ss-item.on b { color: var(--color-action-primary); }
 .ss-item .ms { color: var(--color-action-primary); }
+
+/* ---------------- form dropdown — CLM Figma 31468:83736 (replaces native select lists) ---------------- */
+select.select-native { display: none !important; }
+.cselect { display: flex; align-items: center; width: 100%; height: var(--size-control-small); border: 1px solid var(--border); border-radius: var(--radius-small); padding: 6px 32px 6px 12px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z' fill='%2354545D'/%3E%3C/svg%3E") no-repeat right 6px center / 22px; font-size: 12px; line-height: 16px; letter-spacing: .2px; color: var(--t1); text-align: left; cursor: pointer; transition: border-color .12s; }
+.cselect span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cselect .ph { color: var(--t2); }
+.cselect:hover { border-color: var(--border-strong); }
+.cselect.on, .cselect:focus-visible { border-color: var(--color-border-focus); box-shadow: inset 0 0 0 1px var(--color-border-focus); outline: none; }
+.cselect:disabled { background-color: var(--subtle); border-color: var(--subtle); color: var(--t4); cursor: not-allowed; }
+.field.has-error .cselect { border-color: var(--err); }
+.qty + .cselect, .row > .cselect { width: auto; flex: 1; }
+.dd-pop { position: fixed; background: #fff; border: 1px solid #EDEDED; border-radius: var(--radius-large); box-shadow: 0 4px 6px rgba(0,0,0,.16); padding: 12px 0; z-index: 75; max-height: 280px; overflow-y: auto; animation: pop .12s ease-out; display: flex; flex-direction: column; gap: 2px; }
+.dd-i { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px 12px; text-align: left; font-size: 14px; line-height: 20px; letter-spacing: 0; color: var(--color-raisin-500); }
+.dd-i:hover { background: var(--color-action-outline-hover); }
+.dd-i.on { color: var(--color-action-primary); }
+.dd-i.ph { color: var(--t2); }
+.dd-i[disabled] { color: var(--t4); cursor: not-allowed; }
+.dd-i img { flex: none; }
+
+/* shipment creation · step 1: working package cards all the same size */
+#cStep .cards { grid-auto-rows: 1fr; }
+#cStep .cards .fcard .fbody { height: 100%; }

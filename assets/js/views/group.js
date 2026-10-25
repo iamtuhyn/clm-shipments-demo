@@ -8,7 +8,7 @@
     { k: 'open', label: 'Open', tone: 'grey', icon: 'lg-open', test: (s) => s.status === 'Open' },
     { k: 'approved', label: 'Approved', tone: 'olive', icon: 'lg-approved', test: (s) => !['Open', 'Completed', 'Canceled', 'Rejected'].includes(s.status) },
     { k: 'completed', label: 'Completed', tone: 'blue', icon: 'lg-completed', test: (s) => s.status === 'Completed' },
-    { k: 'canceled', label: 'Canceled', tone: 'red', icon: null, test: (s) => ['Canceled', 'Rejected'].includes(s.status) },
+    { k: 'canceled', label: 'Draft', tone: 'red', icon: null, test: (s) => ['Canceled', 'Rejected'].includes(s.status) },
   ];
   const STATUS_TXT = { overdue: ['warning', 'var(--color-status-error-fg)'], active: ['fiber_manual_record', 'var(--color-status-success-fg)'], pending: ['schedule', 'var(--color-raisin-300)'], completed: ['library_add_check', 'var(--color-data-12)'] };
   let st = null;
@@ -16,9 +16,9 @@
   function render(view, by, key) {
     const wp = by === 'wp' ? S.wp(key) : null;
     if (by === 'wp' && !wp) { view.innerHTML = `<div class="page"><div class="na-page"><div>${ms('folder_off')}<h2>Working package not found</h2><a class="btn" href="#/shipments">Back to Shipments</a></div></div></div>`; return; }
-    if (!st || st.id !== by + key) st = { id: by + key, on: BUCKETS.map((b) => b.k), view: st?.view || 'cards', q: {} };
+    if (!st || st.id !== by + key) st = { id: by + key, on: [], view: st?.view || 'cards', q: {} };
     if (by !== 'wp') st.view = 'list'; // cards are only available for working packages
-    const pass = (s) => BUCKETS.some((b) => st.on.includes(b.k) && b.test(s));
+    const pass = (s) => !st.on.length || BUCKETS.some((b) => st.on.includes(b.k) && b.test(s));
     const all = by === 'wp' ? S.shipmentsOf(key) : S.data.SHIPMENTS.filter((s) => S.groupKey(s, by) === key).sort((a, b) => a.date.localeCompare(b.date));
     const counts = Object.fromEntries(BUCKETS.map((b) => [b.k, all.filter(b.test).length]));
     const status = wp ? S.wpStatus(wp) : null;
@@ -53,7 +53,7 @@
           <span class="gh-lbl">Shipments</span>
           <div class="chips" id="gChips"></div>
           <span class="sp"></span>
-          <div class="vswitch" role="tablist">${[['list', 'format_list_bulleted', 'List'], ['cards', 'grid_on', 'Cards']].map(([k, ic, t]) => `<button class="vs ${st.view === k ? 'on' : ''}" data-v="${k}" ${by !== 'wp' && k === 'cards' ? `disabled data-tip="Cards are available for working packages"` : `data-tip="${t}"`}>${ms(ic)}</button>`).join('')}</div>
+          <div class="vswitch" role="tablist">${[['list', 'format_list_bulleted', 'List'], ['cards', 'grid_on', 'Cards']].map(([k, ic, t]) => `<button class="vs ${st.view === k ? 'on' : ''}" data-v="${k}" ${by !== 'wp' && k === 'cards' ? `disabled data-tip="Working packages only"` : `data-tip="${t}"`}>${ms(ic)}</button>`).join('')}</div>
         </div>
       </div>
       <div class="gbody" id="gBody"></div>
@@ -62,8 +62,9 @@
     const draw = () => {
       const list = all.filter(pass);
       const chips = view.querySelector('#gChips');
-      chips.innerHTML = BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).map((b) => UI.checkChip({ key: b.k, label: b.label, count: counts[b.k], checked: st.on.includes(b.k), tone: b.tone, icon: b.icon ? UI.img(b.icon) : `<span class="ci" style="width:20px;height:20px;color:var(--color-status-error-fg)">${CLM_ICONS['sm-canceled']}</span>` })).join('');
-      chips.querySelectorAll('[data-cc]').forEach((c) => c.onclick = () => { const k = c.dataset.cc; st.on = st.on.includes(k) ? st.on.filter((x) => x !== k) : st.on.concat(k); draw(); });
+      const shown = BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled);
+      chips.innerHTML = UI.checkChip({ key: '', label: 'All', count: all.length, checked: !st.on.length, tone: 'olive' }) + BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).map((b) => UI.checkChip({ key: b.k, label: b.label, count: counts[b.k], checked: st.on.includes(b.k), tone: b.tone, icon: b.icon ? UI.img(b.icon) : `<span class="ci" style="width:20px;height:20px;color:var(--color-status-error-fg)">${CLM_ICONS['sm-canceled']}</span>` })).join('');
+      chips.querySelectorAll('[data-cc]').forEach((c) => c.onclick = () => { const k = c.dataset.cc; st.on = !k ? [] : st.on.includes(k) ? st.on.filter((x) => x !== k) : st.on.concat(k); if (st.on.length === shown.length) st.on = []; draw(); });
       view.querySelector('#gBody').innerHTML = !all.length ? emptyHtml(wp, status, 'No shipments in this working package yet.')
         : !list.length ? emptyHtml(null, null, 'No shipments match the selected status.')
           : st.view === 'cards' ? `<div class="scards">${list.map(cardHtml).join('')}</div>` : tableHtml(list, by);
@@ -130,7 +131,7 @@
     body.onkeydown = (e) => { if (e.key === 'Enter' && e.target.matches('.scard')) e.target.click(); };
     body.querySelectorAll('[data-q]').forEach((inp) => inp.oninput = () => {
       st.q[inp.dataset.q] = inp.value; const k = inp.dataset.q; const pos = inp.selectionStart;
-      const list = (by === 'wp' ? S.shipmentsOf(key) : S.data.SHIPMENTS.filter((s) => S.groupKey(s, by) === key)).filter((s) => BUCKETS.some((b) => st.on.includes(b.k) && b.test(s)));
+      const list = (by === 'wp' ? S.shipmentsOf(key) : S.data.SHIPMENTS.filter((s) => S.groupKey(s, by) === key)).filter((s) => !st.on.length || BUCKETS.some((b) => st.on.includes(b.k) && b.test(s)));
       body.innerHTML = tableHtml(list); bindBody(view, by, key);
       const n = body.querySelector(`[data-q="${k}"]`); n.focus(); n.setSelectionRange(pos, pos);
     });
