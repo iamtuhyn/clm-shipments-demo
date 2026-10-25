@@ -18,7 +18,7 @@
 
   const S = {
     data: load(KEY, null) || clone(CLM_SEED),
-    prefs: Object.assign(defaultPrefs(), load(PREFS_KEY, {})),
+    prefs: (() => { const p = Object.assign(defaultPrefs(), load(PREFS_KEY, {})); if (![4, 52].includes(p.period)) { p.period = 4; p.rangeStart = D.add(D.monday(D.today), -14); } return p; })(),
     persist() { save(KEY, S.data); },
     savePrefs() { save(PREFS_KEY, S.prefs); },
     reset() {

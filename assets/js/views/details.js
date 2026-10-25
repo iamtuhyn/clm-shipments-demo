@@ -91,7 +91,7 @@
   function docsHtml() {
     return `<div class="card"><div class="card-head"><div class="grow"><div class="card-h">Documents (${s.docs.length})</div><div class="card-sub">Delivery notes, permits or plans · PDF, DOCX, PPTX, XLSX up to 20 MB</div></div></div>
       <div class="drop" id="docDrop">${ms('upload')}<div>Drag files here or <a class="link">browse</a></div></div>
-      <div style="margin-top:12px">${s.docs.map((d, i) => `<div class="doc"><span class="dic">${ms('description')}</span><div class="grow"><b style="font-weight:500">${esc(d.name)}</b><div class="cap">${esc(d.type)} · ${esc(d.size)} · ${esc(S.person(d.by).name)}, ${UI.dt(d.at)}</div></div><button class="icon-btn sm" data-dl="${i}" data-tip="Download">${ms('download')}</button><button class="icon-btn sm" data-rmdoc="${i}" data-tip="Delete">${ms('delete')}</button></div>`).join('') || '<div class="cap">No documents uploaded yet.</div>'}</div></div>
+      <div style="margin-top:12px">${s.docs.map((d, i) => `<div class="doc"><span class="dic">${ms('description')}</span><div class="grow"><a class="ulink" style="font-weight:500;color:var(--t1)" data-dl-name>${esc(d.name)}</a><div class="cap">${esc(d.type)} · ${esc(d.size)} · ${esc(S.person(d.by).name)}, ${UI.dt(d.at)}</div></div><button class="icon-btn sm" data-dl="${i}" data-tip="Download">${ms('download')}</button><button class="icon-btn sm" data-rmdoc="${i}" data-tip="Delete">${ms('delete')}</button></div>`).join('') || '<div class="cap">No documents uploaded yet.</div>'}</div></div>
     <div class="card"><div class="card-head"><div class="grow"><div class="card-h">Photos (${s.photos.length})</div><div class="card-sub">Helps the site team identify the load</div></div></div>
       <div class="photos">${s.photos.map((p, i) => `<div class="photo" data-ph="${i}"><img src="${p}" alt=""><button class="rm" data-rmph="${i}" data-tip="Remove">${ms('close', 's16')}</button></div>`).join('')}<div class="add-tile" id="addPhoto">${ms('add_a_photo')}Add photo</div></div></div>`;
   }
@@ -215,13 +215,16 @@
       } }] });
   }
 
+  // Status dropdown — CLM Figma 38326:78434: full width of the status button, grey items, olive on hover
+  const SM = { Open: ['legend-open', 'Reopen'], Approved: ['sm-approved', 'Approved'], Waiting: ['sm-waiting', 'Waiting'], 'In Transit': ['sm-intransit', 'In transit'], Arrived: ['sm-arrived', 'Arrived'], Unloading: ['sm-arrived', 'Arrived and Unloading'], Completed: ['sm-completed', 'Completed'], Rejected: ['sm-rejected', 'Rejected'], Canceled: ['sm-canceled', 'Cancel shipment'] };
   function statusMenu(anchor) {
-    const next = STATUS_FLOW[s.status];
-    const label = { Approved: 'Approve', Rejected: 'Reject', Open: 'Reopen', Waiting: 'Mark as waiting', 'In Transit': 'Mark as in transit', Arrived: 'Mark as arrived', Unloading: 'Start unloading', Completed: 'Mark as completed' };
-    UI.menu(anchor, [{ header: 'Change status to' }].concat(next.map((n) => ({
-      label: label[n] || n, ci: `<span style="color:${SHIPMENT_STATUS[n].color}">${ci(SHIPMENT_STATUS[n].icon, 18)}</span>`, danger: n === 'Rejected',
-      onClick: () => setStatus(n),
-    }))), { align: 'right', minWidth: 230 });
+    const btn = anchor.closest('.status-btn');
+    const next = STATUS_FLOW[s.status].slice();
+    if (!['Completed', 'Canceled', 'Rejected'].includes(s.status)) next.push('Canceled');
+    const el = UI.float(btn, next.map((n) => `<button class="smi ${n === 'Canceled' || n === 'Rejected' ? 'neg' : ''}" data-n="${n}">${ci(SM[n][0], 20)}<span>${SM[n][1]}</span></button>`).join(''), { cls: 'status-menu' });
+    if (!el) return;
+    el.style.width = btn.getBoundingClientRect().width + 'px'; UI.place(el, btn, 'left', 0);
+    el.onclick = (e) => { const b = e.target.closest('[data-n]'); if (!b) return; UI.closeFloat(); b.dataset.n === 'Canceled' ? cancel(s, () => rerender()) : setStatus(b.dataset.n); };
   }
 
   function setStatus(n) {

@@ -42,7 +42,10 @@
           </div>
       </div>
       <div class="hub-body">
-        <div class="hub-main" id="hubMain"></div>
+        <div class="hub-col">
+          <div class="hub-main" id="hubMain"></div>
+          <button class="add-wp-bar ${P.groupBy === 'wp' ? '' : 'hidden'}" data-add-wp id="addWpBar"><span class="ms">add_circle</span>Working package</button>
+        </div>
         <div id="hubPanel"></div>
       </div>
     </div>`;
@@ -51,16 +54,11 @@
   }
 
   function createButton() {
-    return `<div class="split"><button class="btn primary" id="createBtn">${ms('add')}Create</button><button class="btn primary" id="createMore" data-tip="More create options">${ms('expand_more')}</button></div>`;
+    return `<button class="btn primary" id="createBtn">${ms('add')}Shipment</button>`;
   }
   HUB_createButton = createButton;
   function bindCreate(scope) {
     scope.querySelector('#createBtn').onclick = () => CREATE.start();
-    scope.querySelector('#createMore').onclick = (e) => UI.menu(e.currentTarget, [
-      { label: 'New shipment', icon: 'local_shipping', onClick: () => CREATE.start() },
-      { label: 'New working package', icon: 'folder', onClick: () => WPFORM.open() },
-      { label: 'Import working packages (Excel)', icon: 'upload_file', onClick: () => UI.go('#/upload') },
-    ], { align: 'right', minWidth: 320 });
   }
   HUB_bindCreate = bindCreate;
 
@@ -70,6 +68,7 @@
     inp.oninput = () => { clearTimeout(t); t = setTimeout(() => { P.search = inp.value; S.savePrefs(); root.querySelector('#hubClear').classList.toggle('hidden', !inp.value); renderMain(); }, 120); };
     root.querySelector('#hubClear').onclick = () => { inp.value = ''; P.search = ''; S.savePrefs(); root.querySelector('#hubClear').classList.add('hidden'); renderMain(); inp.focus(); };
     bindCreate(root);
+    root.querySelector('#addWpBar').onclick = () => WPFORM.open();
     root.querySelectorAll('[data-view]').forEach((b) => b.onclick = () => {
       P.view = b.dataset.view; S.savePrefs();
       root.querySelectorAll('[data-view]').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
@@ -77,21 +76,25 @@
     });
     root.querySelector('#groupBy').onclick = (e) => UI.menu(e.currentTarget, ['wp', 'destination', 'sender', 'recipient'].map((k) => ({
       label: S.groupLabel(k), icon: { wp: 'folder', destination: 'location_on', sender: 'outbox', recipient: 'move_to_inbox' }[k], on: P.groupBy === k,
-      onClick: () => { P.groupBy = k; S.savePrefs(); root.querySelector('#groupBy span').textContent = S.groupLabel(k); renderMain(); renderPanel(); },
+      onClick: () => { P.groupBy = k; S.savePrefs(); root.querySelector('#groupBy span').textContent = S.groupLabel(k); root.querySelector('#addWpBar').classList.toggle('hidden', k !== 'wp'); renderMain(); renderPanel(); },
     })), { minWidth: 220 });
     const lb = root.querySelector('#legendBtn');
     let hoverT;
-    const showLegend = () => { if (UI.closeFloat && lb.classList.contains('on')) return; UI.float(lb, legendHtml(), { cls: 'popover legend-pop', hover: true }); };
+    const showLegend = () => { if (lb.classList.contains('on')) return; const el = UI.float(lb, legendHtml(), { cls: 'popover legend-pop', hover: true }); if (el) el.querySelector('[data-lgx]').onclick = () => UI.closeFloat(); };
     lb.onmouseenter = () => { hoverT = setTimeout(showLegend, 120); };
     lb.onmouseleave = () => { clearTimeout(hoverT); setTimeout(() => { const pop = document.querySelector('.legend-pop'); if (pop && !pop.matches(':hover') && !lb.matches(':hover')) UI.closeFloat(); }, 200); };
     lb.onclick = () => { if (lb.classList.contains('on')) UI.closeFloat(); else showLegend(); };
     root.querySelector('#propsBtn').onclick = () => { P.panel = !P.panel; S.savePrefs(); renderPanel(); };
   }
 
+  // Status legend — CLM Figma 33780:219175
   function legendHtml() {
-    const wp = Object.values(WP_STATUS).map((w) => `<div class="lg-item">${ci(w.icon, 20)}${w.label}</div>`).join('');
-    const sh = [['legend-open', 'Open'], ['legend-approved', 'Approved'], ['legend-completed', 'Completed']].map(([i, l]) => `<div class="lg-item">${ci(i, 20)}${l}</div>`).join('');
-    return `<h4>Working package status</h4><div class="lg-list">${wp}</div><h4>Shipment status</h4><div class="lg-list">${sh}</div>`;
+    const item = (img, l) => `<span class="lg-item"><img src="assets/fig/${img}.svg" width="20" height="20" alt="">${l}</span>`;
+    return `<button class="lg-x" data-lgx aria-label="Close"><img src="assets/fig/lg-close.svg" width="24" height="24" alt=""></button>
+      <div class="lg-sec"><div class="lg-h"><b>Working package status</b><span>Shows the current stage of your active work package</span></div>
+        <div class="lg-row">${item('lg-overdue', 'Overdue')}${item('lg-active', 'Active')}${item('lg-pending', 'Pending')}${item('lg-wpdone', 'Completed')}</div></div>
+      <div class="lg-sec"><div class="lg-h"><b>Shipment Status</b><span>Shows the current stage of your shipments</span></div>
+        <div class="lg-row">${item('lg-open', 'Open')}${item('lg-approved', 'Approved')}${item('lg-completed', 'Completed')}</div></div>`;
   }
   document.addEventListener('mouseleave', (e) => { if (e.target.classList?.contains('legend-pop')) setTimeout(() => { if (!document.querySelector('#legendBtn:hover')) UI.closeFloat(); }, 150); }, true);
 
@@ -164,8 +167,7 @@
       </div>
       ${open ? shipRowsHtml(g, key) : ''}`;
     }).join('');
-    const add = P.groupBy === 'wp' ? `<button class="add-row" data-add-wp>${ms('add')}Add working package</button>` : '';
-    return `<div class="glist">${head}${rows}${add}</div>`;
+    return `<div class="glist">${head}${rows}</div>`;
   }
 
   function shipRowsHtml(g, key) {
@@ -205,8 +207,7 @@
         dates: g.from ? D.fmt(g.from) + ' - ' + D.fmt(g.to) : '—', sender: g.wp ? g.wp.sender : g.sub, counts, status: g.status, attrs: `data-group="${esc(g.key)}"`,
       });
     }).join('');
-    const add = P.groupBy === 'wp' ? `<div class="fcard add" data-add-wp tabindex="0"><div class="ftab"></div><div class="fbody">${ms('add', 's24')}Add working package</div></div>` : '';
-    return `<div class="cards">${cards}${add}</div>`;
+    return `<div class="cards">${cards}</div>`;
   }
 
   // ---------------------------------------------------------------- TIMELINE
@@ -224,13 +225,26 @@
     const c0 = P.columns; const infoLabel = [(c0.sender || c0.recipient) && [c0.sender && 'Sender', c0.recipient && 'Recipient'].filter(Boolean).join(' → '), (c0.building || c0.floor) && [c0.building && 'Building', c0.floor && 'Floor'].filter(Boolean).join(' · ')].filter(Boolean).join('  ·  ');
     const pct = (d) => (D.diff(d, start) / days) * 100;
     const dayArr = Array.from({ length: days }, (_, i) => D.add(start, i));
-    const bg = `<div class="tl-bgcols" style="grid-template-columns:repeat(${days},1fr)">${dayArr.map((d) => `<div class="${d === D.today ? 'td' : D.dow(d) > 4 ? 'we' : ''}"></div>`).join('')}</div>`;
-    const weeks = []; for (let i = 0; i < days; i += 7) { const d = D.add(start, i); const e = D.add(d, 6); weeks.push(`<div>W${D.week(d)}, ${D.monthName(d, true)}${D.monthName(e, true) !== D.monthName(d, true) ? '–' + D.monthName(e, true) : ''} ${d.slice(0, 4)}</div>`); }
-    const dayW = days > 35 ? 'narrow' : '';
+    const year = P.period >= 52; const nW = days / 7;
+    const weekArr = Array.from({ length: nW }, (_, i) => D.add(start, i * 7));
+    const isTodayWeek = (w) => D.diff(D.today, w) >= 0 && D.diff(D.today, w) < 7;
+    const bg = year
+      ? `<div class="tl-bgcols" style="grid-template-columns:repeat(${nW},1fr)">${weekArr.map((w) => `<div class="${isTodayWeek(w) ? 'td' : ''}"></div>`).join('')}</div>`
+      : `<div class="tl-bgcols" style="grid-template-columns:repeat(${days},1fr)">${dayArr.map((d) => `<div class="${d === D.today ? 'td' : D.dow(d) > 4 ? 'we' : ''}"></div>`).join('')}</div>`;
+    let top, bottom;
+    if (year) {
+      const months = []; weekArr.forEach((w) => { const m = D.monthName(w, true) + ' ' + w.slice(0, 4); if (months.length && months[months.length - 1][0] === m) months[months.length - 1][1]++; else months.push([m, 1]); });
+      top = `<div class="tl-weeks" style="grid-template-columns:repeat(${nW},1fr)">${months.map(([m, n]) => `<div style="grid-column:span ${n}">${n > 1 ? m : ''}</div>`).join('')}</div>`;
+      bottom = `<div class="tl-days" style="grid-template-columns:repeat(${nW},1fr)">${weekArr.map((w) => `<div class="${isTodayWeek(w) ? 'td' : ''}" data-tip="Week ${D.week(w)} · ${D.fmt(w)} – ${D.fmt(D.add(w, 6))}">${D.week(w) % 2 ? '' : D.week(w)}</div>`).join('')}</div>`;
+    } else {
+      const weeks = weekArr.map((d) => { const e = D.add(d, 6); return `<div>W${D.week(d)}, ${D.monthName(d, true)}${D.monthName(e, true) !== D.monthName(d, true) ? '–' + D.monthName(e, true) : ''} ${d.slice(0, 4)}</div>`; });
+      top = `<div class="tl-weeks" style="grid-template-columns:repeat(${nW},1fr)">${weeks.join('')}</div>`;
+      bottom = `<div class="tl-days" style="grid-template-columns:repeat(${days},1fr)">${dayArr.map((d) => `<div class="${d === D.today ? 'td' : D.dow(d) > 4 ? 'we' : ''}" ${d === D.today ? 'data-tip="Today"' : `data-tip="${D.dayName(d, true)}, ${D.fmt(d)}"`}>${+d.slice(8)}</div>`).join('')}</div>`;
+    }
+    const dayW = '';
     const head = `
       <div class="tl-corner" style="height:61px"><div class="tl-colhead"><b>${S.groupLabel(P.groupBy)}</b>${infoLabel ? `<span>${infoLabel}</span>` : ''}</div></div>
-      <div class="tl-hd"><div class="tl-weeks" style="grid-template-columns:repeat(${P.period},1fr)">${weeks.join('')}</div>
-      <div class="tl-days" style="grid-template-columns:repeat(${days},1fr)">${dayArr.map((d) => `<div class="${d === D.today ? 'td' : D.dow(d) > 4 ? 'we' : ''}" ${d === D.today ? 'data-tip="Today"' : `data-tip="${D.dayName(d, true)}, ${D.fmt(d)}"`}>${days > 35 && D.dow(d) % 2 ? '' : +d.slice(8)}</div>`).join('')}</div></div>`;
+      <div class="tl-hd">${top}${bottom}</div>`;
 
     let rows = '';
     groups.forEach((g) => {
@@ -247,7 +261,7 @@
         const before = D.diff(g.to, start) < 0;
         span = `<div class="tl-span" style="${before ? 'left:4px' : 'right:4px'};background:var(--subtle);color:var(--t2)" data-jump="${before ? g.to : g.from}" data-tip="Jump to ${before ? 'end' : 'start'}">${before ? '‹ ended ' + D.fmtShort(g.to) : 'starts ' + D.fmtShort(g.from) + ' ›'}</div>`;
       }
-      const ticks = list.filter((s) => D.diff(s.date, start) >= 0 && D.diff(s.date, end) <= 0).map((s) => `<i class="tl-tick" style="left:${pct(s.date) + 50 / days}%;background:${SHIPMENT_STATUS[s.status].color}"></i>`).join('');
+      const ticks = list.filter((s) => D.diff(s.date, start) >= 0 && D.diff(s.date, end) <= 0).map((s) => `<i class="tl-tick" style="left:${pct(s.date) + (year ? 0 : 50 / days)}%;background:${SHIPMENT_STATUS[s.status].color}"></i>`).join('');
       const info = infoLine(vals); nRows++;
       rows += `<div class="tl-row" data-row>
         <div class="tl-lcell g tl-left" data-group="${esc(g.key)}">
@@ -266,7 +280,7 @@
         if (!list.length) { nRows++; rows += `<div class="tl-row"><div class="tl-lcell s tl-left"><div class="tt cap">No shipments yet</div></div><div class="tl-rcell s">${bg}</div></div>`; }
         shown.forEach((s) => {
           const st = SHIPMENT_STATUS[s.status]; const inR = D.diff(s.date, start) >= 0 && D.diff(s.date, end) <= 0;
-          const bar = inR ? `<div class="tl-ship" data-ship="${s.id}" style="left:calc(${pct(s.date)}% + 2px);width:calc(${100 / days}% - 4px);background:${st.color};color:${isDark(st.color) ? 'rgba(0,0,0,.78)' : '#fff'}" data-tip="<b>${esc(s.name)}</b><br>${s.no} · ${s.status}<br>${D.dayName(s.date)}, ${D.fmt(s.date)} · ${s.start}–${s.end}<br>${esc(S.vehicle(s.vehicle).name)} · ${s.up}">${ci(st.icon, 14)}${days <= 14 ? s.start : ''}</div>`
+          const bar = inR ? `<div class="tl-ship" data-ship="${s.id}" style="left:calc(${pct(s.date)}% + ${year ? 0 : 2}px);width:${year ? 'max(8px, ' + 100 / days + '%)' : `calc(${100 / days}% - 4px)`};padding:${year ? 0 : '0 6px'};background:${st.color};color:${isDark(st.color) ? 'rgba(0,0,0,.78)' : '#fff'}" data-tip="<b>${esc(s.name)}</b><br>${s.no} · ${s.status}<br>${D.dayName(s.date)}, ${D.fmt(s.date)} · ${s.start}–${s.end}<br>${esc(S.vehicle(s.vehicle).name)} · ${s.up}">${year ? '' : ci(st.icon, 14)}</div>`
             : `<div class="tl-span" style="${D.diff(s.date, start) < 0 ? 'left:4px' : 'right:4px'};top:12px;background:var(--subtle);color:var(--t2)" data-jump="${s.date}" data-tip="Show ${D.fmt(s.date)} in timeline">${D.diff(s.date, start) < 0 ? '‹ ' : ''}${D.fmtShort(s.date)}${D.diff(s.date, start) < 0 ? '' : ' ›'}</div>`;
           nRows++;
           rows += `<div class="tl-row" data-row>
@@ -288,15 +302,15 @@
         <button class="btn text today" id="tlToday">TODAY</button>
         <button class="icon-btn" id="tlCal" data-tip="Pick a date">${ms('calendar_month')}</button>
         <span class="sp"></span>
-        <button class="icon-btn" id="tlPrev" data-tip="Previous ${P.period > 1 ? P.period + ' weeks' : 'week'}" style="color:var(--olive)">${ms('chevron_left')}</button>
-        <span class="tl-range">${D.fmt(start)} – ${D.fmt(end)} (${P.period}W)</span>
-        <button class="icon-btn" id="tlNext" data-tip="Next ${P.period > 1 ? P.period + ' weeks' : 'week'}" style="color:var(--olive)">${ms('chevron_right')}</button>
+        <button class="icon-btn" id="tlPrev" data-tip="Previous ${year ? '3 months' : '4 weeks'}" style="color:var(--olive)">${ms('chevron_left')}</button>
+        <span class="tl-range">${D.fmt(start)} – ${D.fmt(end)} (${year ? '1Y' : '4W'})</span>
+        <button class="icon-btn" id="tlNext" data-tip="Next ${year ? '3 months' : '4 weeks'}" style="color:var(--olive)">${ms('chevron_right')}</button>
         <span class="sp"></span>
-        <button class="dd-btn" id="tlPeriod">${ms('date_range')}<span>${P.period} Week${P.period > 1 ? 's' : ''}</span>${ms('expand_more')}</button>
+        <button class="dd-btn" id="tlPeriod">${ms('date_range')}<span>${year ? '1 Year' : '4 Weeks'}</span>${ms('expand_more')}</button>
         <button class="btn text neutral" id="tlExpand">${ms(anyOpen(groups) ? 'unfold_less' : 'unfold_more')}${anyOpen(groups) ? 'Collapse all' : 'Expand all'}</button>
       </div>
-      ${groups.length ? `<div class="tl-grid ${dayW}" id="tlGrid" style="grid-template-columns:${leftW}px minmax(${days * (days > 35 ? 14 : days > 14 ? 16 : 40)}px, 1fr);grid-template-rows:repeat(${nRows}, max-content) minmax(0, 1fr)">${head}${rows}<div class="tl-row"><div class="tl-left tl-fill"></div><div class="tl-rcell tl-fill">${bg}</div></div></div>` : emptyHtml()}
-      <div class="tl-foot"><span>Shipment status:</span>${legend}<span class="sp"></span>${P.groupBy === 'wp' ? `<a class="link" data-add-wp>${ms('add_circle', 's18')}Working package</a>` : ''}</div>
+      ${groups.length ? `<div class="tl-grid ${dayW}" id="tlGrid" style="grid-template-columns:${leftW}px minmax(${year ? nW * 20 : days * 16}px, 1fr);grid-template-rows:repeat(${nRows}, max-content) minmax(0, 1fr)">${head}${rows}<div class="tl-row"><div class="tl-left tl-fill"></div><div class="tl-rcell tl-fill">${bg}</div></div></div>` : emptyHtml()}
+      <div class="tl-foot"><span>Shipment status:</span>${legend}</div>
     </div>`;
   }
   function anyOpen(groups) { return groups.some((g) => S.prefs.expanded[S.prefs.groupBy + ':' + g.key]); }
@@ -312,7 +326,7 @@
       const add = t.closest('[data-add-ship]'); if (add) { e.stopPropagation(); CREATE.start({ wpId: add.dataset.addShip || null }); return; }
       if (t.closest('[data-add-wp]')) { WPFORM.open(); return; }
       if (t.closest('[data-reset-filters]')) { P.search = ''; P.wpStatus = []; S.savePrefs(); render(root); return; }
-      const j = t.closest('[data-jump]'); if (j) { e.stopPropagation(); P.rangeStart = D.add(D.monday(j.dataset.jump), -7 * Math.floor((P.period - 1) / 2)); S.savePrefs(); renderMain(); flash(); return; }
+      const j = t.closest('[data-jump]'); if (j) { e.stopPropagation(); P.rangeStart = D.add(D.monday(j.dataset.jump), -7 * (P.period >= 52 ? 13 : 1)); S.savePrefs(); renderMain(); flash(); return; }
       const sh = t.closest('[data-ship]'); if (sh) { UI.go('#/shipment/' + sh.dataset.ship); return; }
       const g = t.closest('[data-open-group]') || t.closest('[data-group]'); if (g) { openGroup(g.dataset.openGroup || g.dataset.group); }
     };
@@ -330,11 +344,12 @@
   function bindTimeline(main, groups) {
     const P = S.prefs;
     const shift = (w) => { P.rangeStart = D.add(P.rangeStart, w * 7); S.savePrefs(); renderMain(); flash(); };
-    main.querySelector('#tlPrev').onclick = () => shift(-P.period);
-    main.querySelector('#tlNext').onclick = () => shift(P.period);
+    const step = P.period >= 52 ? 13 : 4;
+    main.querySelector('#tlPrev').onclick = () => shift(-step);
+    main.querySelector('#tlNext').onclick = () => shift(step);
     main.querySelector('#tlToday').onclick = () => { P.rangeStart = todayStart(P.period); S.savePrefs(); renderMain(); flash(); };
-    main.querySelector('#tlPeriod').onclick = (e) => UI.menu(e.currentTarget, [1, 2, 4, 8].map((n) => ({ label: `${n} Week${n > 1 ? 's' : ''}`, on: P.period === n, onClick: () => setPeriod(n) })));
-    main.querySelector('#tlCal').onclick = (e) => calendarPop(e.currentTarget, P.rangeStart, (d) => { P.rangeStart = D.add(D.monday(d), -7 * Math.floor((P.period - 1) / 2)); S.savePrefs(); renderMain(); flash(); });
+    main.querySelector('#tlPeriod').onclick = (e) => UI.menu(e.currentTarget, PERIODS.map(([n, l]) => ({ label: l, on: P.period === n, onClick: () => setPeriod(n) })));
+    main.querySelector('#tlCal').onclick = (e) => calendarPop(e.currentTarget, P.rangeStart, (d) => { P.rangeStart = D.add(D.monday(d), -7 * (P.period >= 52 ? 13 : 1)); S.savePrefs(); renderMain(); flash(); });
     main.querySelector('#tlExpand').onclick = () => {
       const open = anyOpen(groups);
       groups.forEach((g) => { const k = P.groupBy + ':' + g.key; if (open) delete P.expanded[k]; else P.expanded[k] = true; });
@@ -344,7 +359,8 @@
     const grid = main.querySelector('#tlGrid');
     if (grid) { const td = grid.querySelector('.tl-days .td'); if (td && grid.scrollWidth > grid.clientWidth) grid.scrollLeft = td.offsetLeft - grid.clientWidth / 2; }
   }
-  function todayStart(period) { return D.add(D.monday(D.today), -7 * { 1: 0, 2: 0, 4: 2, 8: 3 }[period]); }
+  const PERIODS = [[4, '4 Weeks'], [52, '1 Year']];
+  function todayStart(period) { return D.add(D.monday(D.today), -7 * (period >= 52 ? 13 : 2)); }
   function setPeriod(n) { const P = S.prefs; P.period = n; P.rangeStart = todayStart(n); S.savePrefs(); renderMain(); renderPanel(); }
 
   function calendarPop(anchor, sel, onPick) {
@@ -377,13 +393,13 @@
     root.querySelector('#propsBtn').classList.toggle('active', !!P.panel);
     root.querySelector('#propsBtn').innerHTML = ms('settings', P.panel ? 'fill' : '');
     if (!P.panel) { el.innerHTML = ''; el.className = ''; return; }
-    el.className = 'sidepanel'; el.style.cssText = 'margin-left:16px;border-radius:8px;box-shadow:var(--e-card);border:0;align-self:flex-start;position:sticky;top:16px';
+    el.className = 'sidepanel';
     const c = P.columns; const gl = S.groupLabel(P.groupBy);
     el.innerHTML = `
       <div class="sp-h"><h3>Properties</h3><button class="icon-btn" id="ppClose" data-tip="Close">${ms('close')}</button></div>
       <div class="sp-b">
         <div class="field"><label>Time period</label>
-          <select class="select" id="ppPeriod" ${P.view !== 'timeline' ? 'disabled' : ''}>${[1, 2, 4, 8].map((n) => `<option value="${n}" ${P.period === n ? 'selected' : ''}>${n} Week${n > 1 ? 's' : ''}</option>`).join('')}</select>
+          <select class="select" id="ppPeriod" ${P.view !== 'timeline' ? 'disabled' : ''}>${PERIODS.map(([n, l]) => `<option value="${n}" ${P.period === n ? 'selected' : ''}>${l}</option>`).join('')}</select>
           ${P.view !== 'timeline' ? '<span class="hint">Applies to the timeline view</span>' : ''}</div>
         <label class="switch"><input type="checkbox" id="ppCompleted" ${P.showCompleted ? 'checked' : ''}><span>Completed</span></label>
         <div class="cap" style="margin-top:-12px">Show completed working packages and shipments</div>

@@ -5,10 +5,10 @@
   const { D, WP_STATUS } = CLM;
   const { esc, ms, hl, tradeColor, tradeDark } = UI;
   const BUCKETS = [
-    { k: 'open', label: 'Open', icon: 'assets/fig/f-open.svg', test: (s) => s.status === 'Open' },
-    { k: 'approved', label: 'Approved', icon: 'assets/fig/f-approved.svg', test: (s) => !['Open', 'Completed', 'Canceled', 'Rejected'].includes(s.status) },
-    { k: 'completed', label: 'Completed', icon: 'assets/fig/f-completed.svg', test: (s) => s.status === 'Completed' },
-    { k: 'canceled', label: 'Canceled', icon: null, test: (s) => ['Canceled', 'Rejected'].includes(s.status) },
+    { k: 'open', label: 'Open', dot: 'var(--color-raisin-300)', test: (s) => s.status === 'Open' },
+    { k: 'approved', label: 'Approved', dot: 'var(--color-action-primary)', test: (s) => !['Open', 'Completed', 'Canceled', 'Rejected'].includes(s.status) },
+    { k: 'completed', label: 'Completed', dot: 'var(--color-data-12)', test: (s) => s.status === 'Completed' },
+    { k: 'canceled', label: 'Canceled', dot: 'var(--color-status-error-fg)', test: (s) => ['Canceled', 'Rejected'].includes(s.status) },
   ];
   const STATUS_TXT = { overdue: ['warning', 'var(--color-status-error-fg)'], active: ['fiber_manual_record', 'var(--color-status-success-fg)'], pending: ['schedule', 'var(--color-raisin-300)'], completed: ['library_add_check', 'var(--color-data-12)'] };
   let st = null;
@@ -16,53 +16,53 @@
   function render(view, by, key) {
     const wp = by === 'wp' ? S.wp(key) : null;
     if (by === 'wp' && !wp) { view.innerHTML = `<div class="page"><div class="na-page"><div>${ms('folder_off')}<h2>Working package not found</h2><a class="btn" href="#/shipments">Back to Shipments</a></div></div></div>`; return; }
-    if (!st || st.id !== by + key) st = { id: by + key, on: { open: true, approved: true, completed: true, canceled: true }, view: st?.view || 'cards', q: {} };
+    if (!st || st.id !== by + key) st = { id: by + key, on: [], view: st?.view || 'cards', q: {} };
+    const pass = (s) => !st.on.length || BUCKETS.some((b) => st.on.includes(b.k) && b.test(s));
     const all = by === 'wp' ? S.shipmentsOf(key) : S.data.SHIPMENTS.filter((s) => S.groupKey(s, by) === key).sort((a, b) => a.date.localeCompare(b.date));
     const counts = Object.fromEntries(BUCKETS.map((b) => [b.k, all.filter(b.test).length]));
     const status = wp ? S.wpStatus(wp) : null;
 
-    // header facts
-    const sep = '<i class="gh-sep"></i>';
-    const fact = (l, v) => `<span class="gh-fact"><b>${l}:</b> <span>${esc(v)}</span></span>`;
-    let facts;
-    if (wp) {
-      const [ic, col] = STATUS_TXT[status];
-      facts = `<span class="gh-trade ${tradeDark(wp.trade) ? 'dark-t' : ''}" style="background:${tradeColor(wp.trade)}">${esc(wp.trade)}</span>${fact('Building', wp.building)}${sep}${fact('Floor', wp.floor)}${sep}${fact('Duration', `${D.fmt(wp.from)} - ${D.fmt(wp.to)}`)}<span class="gh-status" style="color:${col}">${ms(ic, 's18')}${WP_STATUS[status].label}</span>`;
-    } else {
-      const uniq = (f) => new Set(all.map(f)).size;
-      const pad = (n) => String(n).padStart(2, '0');
-      const parts = by === 'destination'
-        ? [['Laydown areas', pad(uniq((s) => s.zone))], ['Senders', pad(uniq((s) => s.sender))], ['Working packages', pad(uniq((s) => s.wpId))]]
-        : by === 'sender'
-          ? [['Recipients', pad(uniq((s) => s.recipient))], ['Buildings', pad(uniq((s) => s.building))], ['Working packages', pad(uniq((s) => s.wpId))]]
-          : [['Senders', pad(uniq((s) => s.sender))], ['Buildings', pad(uniq((s) => s.building))], ['Working packages', pad(uniq((s) => s.wpId))]];
-      facts = `<span class="gh-trade" style="background:var(--color-raisin-300)">${S.groupLabel(by)}</span>` + parts.map(([l, v]) => fact(l, v)).join(sep);
-    }
-    const org = wp ? wp.sender : by === 'sender' || by === 'recipient' ? key : null;
+    // header facts — label above value (Figma B2 · Package opened)
+    const kv = (l, v) => `<div class="gh-kv"><span>${l}</span><b>${esc(v)}</b></div>`;
+    const uniq = (f) => new Set(all.map(f)).size;
+    const facts = wp
+      ? kv('Trade', wp.trade) + kv('Location', `${wp.building} · ${wp.floor}${wp.zone ? ' · ' + wp.zone : ''}`) + kv('Booking window', `${D.fmt(wp.from)} – ${D.fmt(wp.to)}`) + kv('Sender', wp.sender) + kv('Recipient', wp.recipient) + kv('Volume', [wp.volume !== '—' && wp.volume, wp.unitsQty && `${wp.unitsQty} ${wp.units}`].filter(Boolean).join(' · ') || '—')
+      : by === 'destination'
+        ? kv('Laydown areas', uniq((s) => s.zone)) + kv('Senders', uniq((s) => s.sender)) + kv('Recipients', uniq((s) => s.recipient)) + kv('Working packages', uniq((s) => s.wpId))
+        : kv(by === 'sender' ? 'Recipients' : 'Senders', uniq((s) => (by === 'sender' ? s.recipient : s.sender))) + kv('Buildings', uniq((s) => s.building)) + kv('Floors', uniq((s) => s.building + s.floor)) + kv('Working packages', uniq((s) => s.wpId));
+    const done = counts.completed; const pct = all.length ? Math.round((done / all.length) * 100) : 0;
+    const accent = wp ? tradeColor(wp.trade) : 'var(--color-action-primary)';
+    const icon = { wp: 'folder', destination: 'location_on', sender: 'outbox', recipient: 'move_to_inbox' }[by];
+    const statusChip = wp ? `<span class="pill ${{ overdue: 'error', active: 'success', pending: 'warning', completed: 'inactive' }[status]}">${WP_STATUS[status].label}</span>` : `<span class="pill">${S.groupLabel(by)}</span>`;
 
     view.innerHTML = `
     <div class="page gpage">
-      <div class="sticky-head gh">
-        <div class="gh-band">
+      <div class="sticky-head gh" style="--accent:${accent}">
+        <div class="gh-top">
           <button class="back" id="gBack" data-tip="Back">${ms('arrow_back')}</button>
-          <div class="grow">
-            <div class="gh-title"><h1>${esc(wp ? wp.title : key)}</h1>${wp ? `<button class="icon-btn sm" id="gEdit" data-tip="Edit working package">${ms('edit', 's18')}</button><button class="icon-btn sm" id="gMore" data-tip="More actions">${ms('more_vert', 's18')}</button>` : ''}</div>
-            <div class="gh-facts">${facts}</div>
-          </div>
-          ${org ? `<div class="gh-logo" data-tip="${esc(org)}">${esc(org.split(/[\s.&]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase())}<small>${esc(org)}</small></div>` : ''}
+          <span class="ms gh-ic" style="color:${accent}">${icon}</span>
+          <h1 class="ell">${esc(wp ? wp.title : key)}</h1>${statusChip}
+          <span class="sp"></span>
+          ${wp ? `<button class="btn text" id="gEdit">${ms('edit')}Edit</button><button class="icon-btn" id="gMore" data-tip="More actions">${ms('more_vert')}</button>` : ''}
+          ${!wp || status !== 'completed' ? `<button class="btn primary" id="gAdd">${ms('add')}Add shipment</button>` : ''}
         </div>
+        <div class="gh-grid">${facts}</div>
+        <div class="gh-prog"><div class="progress"><i style="width:${pct}%"></i></div><span>${done} of ${all.length} shipments completed</span></div>
         <div class="gh-bar">
-          <div class="gh-filters">${BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).map((b) => `<button class="sfilter ${b.k} ${st.on[b.k] ? 'on' : ''}" data-b="${b.k}" aria-pressed="${st.on[b.k]}"><span class="cbx"></span>${b.icon ? `<img src="${b.icon}" width="24" height="24" alt="">` : ms('block')}<b>${counts[b.k]}</b>${b.label}</button>`).join('')}</div>
+          <span class="gh-lbl">Shipments</span>
+          <div class="chips" id="gChips"></div>
           <span class="sp"></span>
           <div class="itabs" role="tablist">${[['list', 'view_list', 'List'], ['cards', 'view_module', 'Cards']].map(([k, ic, t]) => `<button class="itab ${st.view === k ? 'on' : ''}" data-v="${k}" data-tip="${t}">${ms(ic)}</button>`).join('')}</div>
-          ${!wp || status !== 'completed' ? `<button class="btn primary" id="gAdd">${ms('add')}Add shipment</button>` : ''}
         </div>
       </div>
       <div class="gbody" id="gBody"></div>
     </div>`;
 
     const draw = () => {
-      const list = all.filter((s) => BUCKETS.some((b) => st.on[b.k] && b.test(s)));
+      const list = all.filter(pass);
+      const chips = view.querySelector('#gChips');
+      chips.innerHTML = `<button class="chip ${!st.on.length ? 'on' : ''}" data-b="">All<span class="n">${all.length}</span></button>` + BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).map((b) => `<button class="chip ${st.on.includes(b.k) ? 'on' : ''}" data-b="${b.k}"><i class="dot" style="background:${b.dot}"></i>${b.label}<span class="n">${counts[b.k]}</span></button>`).join('');
+      chips.querySelectorAll('[data-b]').forEach((c) => c.onclick = () => { const k = c.dataset.b; st.on = !k ? [] : st.on.includes(k) ? st.on.filter((x) => x !== k) : st.on.concat(k); if (st.on.length === BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).length) st.on = []; draw(); });
       view.querySelector('#gBody').innerHTML = !all.length ? emptyHtml(wp, status, 'No shipments in this working package yet.')
         : !list.length ? emptyHtml(null, null, 'No shipments match the selected status.')
           : st.view === 'cards' ? `<div class="scards">${list.map(cardHtml).join('')}</div>` : tableHtml(list, by);
@@ -70,7 +70,6 @@
     };
     draw();
 
-    view.querySelectorAll('.sfilter').forEach((b) => b.onclick = () => { st.on[b.dataset.b] = !st.on[b.dataset.b]; b.classList.toggle('on'); b.setAttribute('aria-pressed', st.on[b.dataset.b]); draw(); });
     view.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { st.view = b.dataset.v; view.querySelectorAll('[data-v]').forEach((x) => x.classList.toggle('on', x === b)); draw(); });
     view.querySelector('#gBack').onclick = () => goBack();
     view.querySelector('#gAdd')?.addEventListener('click', () => CREATE.start({ wpId: wp ? wp.id : null }));
@@ -87,14 +86,14 @@
   function cardHtml(s) {
     const cr = S.person(s.createdBy);
     return `<div class="scard" data-ship="${s.id}" tabindex="0">
-      <div class="sc-head">${statusIcon(s)}<span class="ell" data-tip="${esc(s.name)}">${esc(s.name)}</span><button class="icon-btn sm sc-menu" data-rowmenu="${s.id}" data-tip="Actions">${ms('more_vert', 's18')}</button></div>
-      <div class="sc-when"><span>${ms('event', 's16')}${D.fmt(s.date)}</span><i></i><span>${ms('schedule', 's16')}${s.start} - ${s.end}</span></div>
+      <div class="sc-head">${statusIcon(s)}<div class="grow"><div class="ell" data-tip="${esc(s.name)}">${esc(s.name)}</div><div class="sc-no">${esc(s.no)}</div></div><button class="icon-btn sm sc-menu" data-rowmenu="${s.id}" data-tip="Actions">${ms('more_vert', 's18')}</button></div>
+      <div class="sc-when"><span data-tip="${D.dayName(s.date, true)}"><i class="ms">event</i>${D.fmt(s.date)}</span><span class="vr"></span><span><i class="ms">schedule</i>${s.start} – ${s.end}</span></div>
       <div class="sc-rows">
-        <div>${ms('location_on', 's16')}<b>Unloading Zone (UP)-</b><span>${esc(s.up)}</span></div>
-        <div>${ms('corporate_fare', 's16')}<b>Building-</b><span>${esc(s.building)}</span></div>
-        <div>${ms('storage', 's16')}<b>Floor-</b><span>${esc(s.floor)}</span></div>
+        <div><i class="ms">location_on</i><b>Unloading zone</b><em>${esc(s.up)} · ${esc(s.zone)}</em></div>
+        <div><i class="ms">corporate_fare</i><b>Building</b><em>${esc(s.building)}</em></div>
+        <div><i class="ms">layers</i><b>Floor</b><em>${esc(s.floor)}</em></div>
       </div>
-      <div class="sc-foot"><span class="avatar sm">${UI.initials(cr.name)}</span><div style="min-width:0"><div>Created by</div><div class="ell">${esc(cr.name)} <i>|</i> ${D.fmt(s.created.slice(0, 10))}. ${s.created.slice(11)}</div></div></div>
+      <div class="sc-foot"><span class="avatar sm">${UI.initials(cr.name)}</span><div class="grow"><div class="cap">Created by</div><div class="ell">${esc(cr.name)} · ${D.fmt(s.created.slice(0, 10))}, ${s.created.slice(11)}</div></div></div>
     </div>`;
   }
   function createdLabel(iso) { const [d, t] = iso.split('T'); return `${+d.slice(8)} ${D.monthName(d, true)} ${d.slice(0, 4)}, ${t}`; }
@@ -131,7 +130,7 @@
     body.onkeydown = (e) => { if (e.key === 'Enter' && e.target.matches('.scard')) e.target.click(); };
     body.querySelectorAll('[data-q]').forEach((inp) => inp.oninput = () => {
       st.q[inp.dataset.q] = inp.value; const k = inp.dataset.q; const pos = inp.selectionStart;
-      const list = (by === 'wp' ? S.shipmentsOf(key) : S.data.SHIPMENTS.filter((s) => S.groupKey(s, by) === key)).filter((s) => BUCKETS.some((b) => st.on[b.k] && b.test(s)));
+      const list = (by === 'wp' ? S.shipmentsOf(key) : S.data.SHIPMENTS.filter((s) => S.groupKey(s, by) === key)).filter((s) => !st.on.length || BUCKETS.some((b) => st.on.includes(b.k) && b.test(s)));
       body.innerHTML = tableHtml(list); bindBody(view, by, key);
       const n = body.querySelector(`[data-q="${k}"]`); n.focus(); n.setSelectionRange(pos, pos);
     });
