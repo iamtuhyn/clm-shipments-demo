@@ -1,6 +1,6 @@
 /* Create / edit shipment — 5 steps + overview, live summary panel */
 (function () {
-  const { D, TRADES, VEHICLES, MATERIALS, UNLOADING_POINTS, EQUIPMENT_BOOKABLE, EQUIPMENT_ONSITE, ORGS, BUILDINGS, FLOORS, ZONES, GATES, TEMPLATES, WP_STATUS } = CLM;
+  const { D, TRADES, VEHICLES, MATERIALS, UNLOADING_POINTS, EQUIPMENT_BOOKABLE, EQUIPMENT_ONSITE, ORGS, BUILDINGS, FLOORS, ZONES, GATES, WP_STATUS } = CLM;
   const { esc, ms, ci, tradeColor, tradeDark } = UI;
   const STEPS = ['Date', 'Materials', 'Transport', 'Time slot', 'Other info', 'Overview'];
   const DAY_START = 7 * 60, DAY_END = 18 * 60;
@@ -47,37 +47,55 @@
     startModal();
   }
 
+  /* "How would you like to start?" — CLM Figma 38218:8917. No templates: every option is copied from shipment history. */
   function startModal() {
-    const tpls = TEMPLATES.concat(S.data.templates || []);
-    const recent = S.data.SHIPMENTS.filter((s) => s.createdBy === 'p1').sort((a, b) => b.created.localeCompare(a.created)).slice(0, 3);
-    let choice = 'blank';
+    const byNew = (a, b) => b.created.localeCompare(a.created);
+    const uniq = (list) => { const seen = new Set(); return list.filter((s) => !seen.has(s.name) && seen.add(s.name)); };
+    const freq = (() => { const n = {}; S.data.SHIPMENTS.forEach((s) => { n[s.name] = (n[s.name] || 0) + 1; }); return uniq(S.data.SHIPMENTS.slice().sort((a, b) => n[b.name] - n[a.name] || byNew(a, b))); })();
+    const SRC = {
+      freq: { label: 'Frequently used', list: freq },
+      mine: { label: 'From your shipments', list: uniq(S.data.SHIPMENTS.filter((s) => s.createdBy === 'p1').sort(byNew)) },
+      team: { label: 'From your team mates', list: uniq(S.data.SHIPMENTS.filter((s) => s.createdBy !== 'p1').sort(byNew)) },
+    };
+    let src = 'freq'; let all = false;
     let saved = null; try { saved = JSON.parse(localStorage.getItem('clm-shipment-draft') || 'null'); } catch (e) {}
-    UI.modal({ title: 'Create shipment', sub: 'Start from scratch or reuse what you send often.', size: 'wide', body: `
-      ${saved ? `<div class="banner info" style="margin-bottom:14px" id="smDraft">${ms('edit_document')}<div class="grow"><b>Continue your draft?</b><p>${esc(saved.name || 'Untitled shipment')} · step ${saved.step} of 6 · ${STEPS[saved.step - 1]}</p></div><button class="btn text sm" data-draft-x>Discard</button><button class="btn sm primary" data-draft-go>Continue draft</button></div>` : ''}
-      <div class="sel-grid" style="grid-template-columns:repeat(3,1fr)">
-        <div class="stile on" data-c="blank" style="min-height:104px">${ms('note_add', 's24')}<b>Start from scratch</b><small>Empty shipment, 5 short steps</small></div>
+    const card = (s) => { const by = S.person(s.createdBy); return `<div class="hcard">
+      <b class="hc-n ell" data-tip="${esc(s.name)}">${esc(s.name)}</b>
+      <div class="hc-b">
+        <div><i class="ms">location_on</i><span>Unloading point</span><em>${esc(s.up)}</em></div>
+        <div><i class="ms">apartment</i><span>Building</span><em>${esc(s.building)}</em></div>
+        <div><i class="ms">layers</i><span>Floor</span><em>${esc(s.floor)}</em></div>
       </div>
-      <div class="section-label" style="margin:18px 0 8px">Or duplicate one of your recent shipments</div>
-      <div class="sel-grid" style="grid-template-columns:repeat(3,1fr)">
-        ${tpls.map((t) => `<div class="stile" data-c="tpl:${t.id}" style="min-height:104px">${ci(S.vehicle(t.vehicle).icon, 52, 'height:26px')}<b>${esc(t.name)}</b><small>${esc(t.desc)}</small></div>`).join('')}
+      <div class="hc-by"><span class="hc-av">${UI.initials(by.name)}</span><span class="ell">by ${esc(by.name)} · ${D.fmt(s.created.slice(0, 10))}</span></div>
+      <div class="hc-a"><button class="btn text sm" data-prev="${s.id}">${ms('visibility')}Preview</button><button class="btn text sm" data-use="${s.id}">${ms('content_copy')}Duplicate</button></div>
+    </div>`; };
+    const list = () => { const l = SRC[src].list; return `${l.length ? `<div class="hcards">${l.slice(0, all ? 12 : 3).map(card).join('')}</div>` : '<div class="cap" style="padding:8px 0">No shipments yet</div>'}
+      ${l.length > 3 ? `<button class="hs-all" data-all>${all ? 'Show less' : `See all ${SRC[src].label.toLowerCase().replace(/^from /, '')}`}</button>` : ''}`; };
+    UI.modal({ title: 'How would you like to start?', size: 'wide', body: `
+      ${saved ? `<div class="banner info" style="margin-bottom:12px" id="smDraft">${ms('edit_document')}<div class="grow"><b>Continue your draft?</b><p>${esc(saved.name || 'Untitled shipment')} · step ${saved.step} of 6 · ${STEPS[saved.step - 1]}</p></div><button class="btn text sm" data-draft-x>Discard</button><button class="btn sm primary" data-draft-go>Continue draft</button></div>` : ''}
+      <div class="hs-new">
+        <span class="hs-plus">${ms('add')}</span>
+        <div class="grow"><b>Start from scratch</b><p>Create a new shipment step by step. You pick the working package in the first step.</p></div>
+        <button class="btn primary" data-new>Create new</button>
+      </div>
+      <div class="hs-hist">
+        <div class="hs-h"><b>Start from a previous shipment</b><p>Copy the details of a shipment you or your team created. You pick a new date and time slot.</p></div>
+        <div class="hs-pills">${Object.entries(SRC).map(([k, o]) => `<button class="hs-pill ${k === src ? 'on' : ''}" data-src="${k}">${o.label}</button>`).join('')}</div>
+        <div id="hsList">${list()}</div>
       </div>`,
       onMount: (el, close) => {
+        const start = () => { wpSearch = ''; wpShowAll = false; close(); UI.go('#/create'); };
         el.querySelector('[data-draft-go]')?.addEventListener('click', () => { d = saved; d.dirty = true; close(); UI.go('#/create'); });
         el.querySelector('[data-draft-x]')?.addEventListener('click', () => { try { localStorage.removeItem('clm-shipment-draft'); } catch (e) {} el.querySelector('#smDraft').remove(); });
         el.addEventListener('click', (e) => {
-          const t = e.target.closest('[data-c]'); if (!t) return; choice = t.dataset.c;
-          el.querySelectorAll('[data-c]').forEach((x) => { x.classList.toggle('on', x === t); x.style.borderColor = x.classList.contains('doc') && x === t ? 'var(--olive)' : ''; const r = x.querySelector('.faint .ms'); if (r) r.textContent = x === t ? 'radio_button_checked' : 'radio_button_unchecked'; });
+          const t = e.target;
+          if (t.closest('[data-new]')) { d = blank(); return start(); }
+          const sp = t.closest('[data-src]'); if (sp) { src = sp.dataset.src; all = false; el.querySelectorAll('[data-src]').forEach((x) => x.classList.toggle('on', x === sp)); el.querySelector('#hsList').innerHTML = list(); return; }
+          if (t.closest('[data-all]')) { all = !all; el.querySelector('#hsList').innerHTML = list(); return; }
+          const pv = t.closest('[data-prev]'); if (pv) { close(); return UI.go('#/shipment/' + pv.dataset.prev); }
+          const u = t.closest('[data-use]'); if (u) { const s = S.shipment(u.dataset.use); d = fromShipment(s, blank()); d.name = s.name + ' (copy)'; return start(); }
         });
-        el.addEventListener('dblclick', (e) => { if (e.target.closest('[data-c]')) el.querySelector('.dlg-f .btn.primary').click(); });
-      },
-      actions: [{ label: 'Cancel', text: true }, { label: 'Continue', primary: true, icon: 'arrow_forward', onClick: () => {
-        wpSearch = ''; wpShowAll = false;
-        if (choice === 'blank') d = blank();
-        else if (choice.startsWith('tpl:')) {
-          const t = tpls.find((x) => x.id === choice.slice(4)); d = blank({ vehicle: t.vehicle, materials: JSON.parse(JSON.stringify(t.materials)).map((m) => Object.assign({ unit: S.material(m.id).unit, note: '' }, m)), equipment: t.equipment ? JSON.parse(JSON.stringify(t.equipment)) : [], fromTemplate: t.name });
-        } else { const s = S.shipment(choice.slice(4)); d = fromShipment(s, blank()); d.name = s.name + ' (copy)'; }
-        UI.go('#/create');
-      } }] });
+      } });
   }
 
   // ---------------------------------------------------------------- page
@@ -91,7 +109,6 @@
         <div class="flow-head">
           <button class="back" id="cBack" data-tip="Leave">${ms('arrow_back')}</button>
           <h1>${edit ? 'Edit Shipment' : 'Create Shipment'}</h1>
-          ${d.fromTemplate ? `<span class="pill olive" style="margin-left:4px">Template · ${esc(d.fromTemplate)}</span>` : ''}
         </div>
         <div class="stepper-bar">
           <button class="btn" id="cPrev" ${d.step === 1 ? 'disabled' : ''}>${ms('arrow_back')}Back</button>

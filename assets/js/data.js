@@ -34,25 +34,25 @@
     'Elektro': { color: '#3CA227', short: 'Elektro' },
   };
 
+  // Shipment statuses — CLM Figma 28587:11774 (legend). The only statuses that exist.
+  // color = bar colour (outline: drawn as an outlined bar), bg / fg = light pill + dark text/icon
   const SHIPMENT_STATUS = {
-    'Open':       { color: '#A09FB5', icon: 'st-requested', tone: 'neutral' },
-    'Approved':   { color: '#C4C27A', icon: 'st-approved', tone: 'olive' },
-    'Waiting':    { color: '#71C68D', icon: 'st-waiting', tone: 'success' },
-    'In Transit': { color: '#4CBB6C', icon: 'st-intransit', tone: 'success' },
-    'Arrived':    { color: '#30713D', icon: 'st-parking', tone: 'success' },
-    'Unloading':  { color: '#30713D', icon: 'st-unloading', tone: 'success' },
-    'Completed':  { color: '#1E3F8A', icon: 'st-completed', tone: 'blue' },
-    'Canceled':   { color: '#A3162B', icon: 'st-cancelled', tone: 'error' },
-    'Rejected':   { color: '#9E9EA7', icon: 'st-cancelled', tone: 'inactive' },
+    'Open':                { label: 'Open', color: '#BEBEC2', bg: '#F1F1F2', fg: '#474752', icon: 'ss-open' },
+    'Approved':            { label: 'Approved', color: '#97D8A5', outline: true, bg: '#EAF7ED', fg: '#2F7A44', icon: 'ss-approved' },
+    'Waiting':             { label: 'Waiting', color: '#97D8A5', bg: '#EAF7ED', fg: '#2F7A44', icon: 'ss-waiting' },
+    'In Transit':          { label: 'In Transit', color: '#4EBC65', bg: '#E2F4E6', fg: '#23753A', icon: 'ss-intransit' },
+    'Arrived & Unloading': { label: 'Arrived & Unloading', color: '#2D763D', bg: '#DFECE2', fg: '#2D763D', icon: 'ss-arrived' },
+    'Completed':           { label: 'Completed', color: '#2E60AA', bg: '#E3EBF7', fg: '#2E60AA', icon: 'ss-completed' },
+    'Canceled':            { label: 'Cancelled', color: '#BCAD96', outline: true, bg: '#F4F0EA', fg: '#6E604A', icon: 'ss-cancelled' },
+    'Rejected':            { label: 'Rejected', color: '#F15C5E', outline: true, bg: '#FDE8E8', fg: '#B3261E', icon: 'ss-rejected' },
   };
   // allowed next steps from each status (front-end only, mirrors backend workflow)
   const STATUS_FLOW = {
     'Open': ['Approved', 'Rejected'],
     'Approved': ['Waiting', 'In Transit', 'Open'],
     'Waiting': ['In Transit'],
-    'In Transit': ['Arrived'],
-    'Arrived': ['Unloading'],
-    'Unloading': ['Completed'],
+    'In Transit': ['Arrived & Unloading'],
+    'Arrived & Unloading': ['Completed'],
     'Completed': [],
     'Canceled': ['Open'],
     'Rejected': ['Open'],
@@ -61,7 +61,7 @@
   const WP_STATUS = {
     overdue:   { label: 'Overdue', icon: 'legend-overdue', tone: 'error', dot: '#E12601' },
     active:    { label: 'Active', icon: 'legend-active', tone: 'success', dot: '#36A162' },
-    pending:   { label: 'Pending', icon: 'legend-pending', tone: 'warning', dot: '#676770' },
+    pending:   { label: 'Pending', icon: 'legend-pending', tone: 'grey', dot: '#676770' },
     completed: { label: 'Completed', icon: 'legend-wp-completed', tone: 'blue', dot: '#2E60AA' },
   };
 

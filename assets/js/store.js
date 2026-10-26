@@ -130,6 +130,9 @@
     log(s, text, icon) { s.activity.push({ at: nowIso(), by: 'p1', text, icon: icon || 'edit' }); },
   };
 
+  // statuses outside the Figma legend (28587:11774) from older saved data
+  S.data.SHIPMENTS.forEach((s) => { if (s.status === 'Arrived' || s.status === 'Unloading') s.status = 'Arrived & Unloading'; if (!CLM.SHIPMENT_STATUS[s.status]) s.status = 'Open'; });
+
   function byDate(a, b) { return a.date.localeCompare(b.date) || a.start.localeCompare(b.start); }
   function nowIso() {
     const t = new Date();

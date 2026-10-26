@@ -8,10 +8,8 @@
 
   const agg = (list, f) => { const v = [...new Set(list.map((s) => s[f]))]; return v.length === 1 ? v[0] : v.length ? 'Multiple' : '—'; };
   const legendShipIcon = (status, size = 18) => {
-    const map = { Open: 'legend-open', Approved: 'legend-approved', Completed: 'legend-completed' };
-    if (map[status]) return `<span data-tip="Shipment: ${status}">${ci(map[status], size)}</span>`;
-    const s = SHIPMENT_STATUS[status];
-    return `<span data-tip="Shipment: ${esc(status)}" style="color:${s.color}">${ci(s.icon, size)}</span>`;
+    const s = SHIPMENT_STATUS[status] || SHIPMENT_STATUS.Open;
+    return `<span data-tip="Shipment: ${esc(s.label)}" style="color:${s.color};display:inline-flex">${ci(s.icon, size)}</span>`;
   };
   HUB_legendShipIcon = legendShipIcon;
 
@@ -283,7 +281,7 @@
         if (!list.length) { nRows++; rows += `<div class="tl-row"><div class="tl-lcell s tl-left"><div class="tt cap">No shipments yet</div></div><div class="tl-rcell s">${bg}</div></div>`; }
         shown.forEach((s) => {
           const st = SHIPMENT_STATUS[s.status]; const inR = D.diff(s.date, start) >= 0 && D.diff(s.date, end) <= 0;
-          const bar = inR ? `<div class="tl-ship" data-ship="${s.id}" style="left:calc(${pct(s.date)}% + ${year ? 0 : 2}px);width:${year ? 'max(8px, ' + 100 / days + '%)' : `calc(${100 / days}% - 4px)`};padding:${year ? 0 : '0 6px'};background:${st.color};color:${isDark(st.color) ? 'rgba(0,0,0,.78)' : '#fff'}" data-tip="<b>${esc(s.name)}</b><br>${s.no} · ${s.status}<br>${D.dayName(s.date)}, ${D.fmt(s.date)} · ${s.start}–${s.end}<br>${esc(S.vehicle(s.vehicle).name)} · ${s.up}">${year ? '' : ci(st.icon, 14)}</div>`
+          const bar = inR ? `<div class="tl-ship" data-ship="${s.id}" style="left:calc(${pct(s.date)}% + ${year ? 0 : 2}px);width:${year ? 'max(8px, ' + 100 / days + '%)' : `calc(${100 / days}% - 4px)`};padding:${year ? 0 : '0 6px'};${st.outline ? `background:#fff;box-shadow:inset 0 0 0 2px ${st.color};color:${st.fg}` : `background:${st.color};color:${isDark(st.color) ? 'rgba(0,0,0,.78)' : '#fff'}`}" data-tip="<b>${esc(s.name)}</b><br>${s.no} · ${st.label}<br>${D.dayName(s.date)}, ${D.fmt(s.date)} · ${s.start}–${s.end}<br>${esc(S.vehicle(s.vehicle).name)} · ${s.up}">${year ? '' : ci(st.icon, 14)}</div>`
             : `<div class="tl-span" style="${D.diff(s.date, start) < 0 ? 'left:4px' : 'right:4px'};top:12px;background:var(--subtle);color:var(--t2)" data-jump="${s.date}" data-tip="Show ${D.fmt(s.date)} in timeline">${D.diff(s.date, start) < 0 ? '‹ ' : ''}${D.fmtShort(s.date)}${D.diff(s.date, start) < 0 ? '' : ' ›'}</div>`;
           nRows++;
           rows += `<div class="tl-row" data-row>
@@ -307,7 +305,6 @@
         <span class="tl-range">${D.fmt(start)} – ${D.fmt(end)} (${year ? '1Y' : '4W'})</span>
         <button class="icon-btn" id="tlNext" data-tip="Next ${year ? '3 months' : '4 weeks'}" style="color:var(--olive)">${ms('chevron_right')}</button>
         <span class="sp"></span>
-        <button class="dd-btn" id="tlPeriod">${ms('date_range')}<span>${year ? '1 Year' : '4 Weeks'}</span>${ms('expand_more')}</button>
         <button class="btn text neutral" id="tlExpand">${ms(anyOpen(groups) ? 'unfold_less' : 'unfold_more')}${anyOpen(groups) ? 'Collapse all' : 'Expand all'}</button>
       </div>
       ${groups.length ? `<div class="tl-grid ${dayW}" id="tlGrid" style="grid-template-columns:${leftW}px minmax(${year ? nW * 20 : days * 16}px, 1fr);grid-template-rows:repeat(${nRows}, max-content) minmax(0, 1fr)">${head}${rows}<div class="tl-row"><div class="tl-left tl-fill"></div><div class="tl-rcell tl-fill">${bg}</div></div></div>` : emptyHtml()}
@@ -349,7 +346,6 @@
     main.querySelector('#tlPrev').onclick = () => shift(-step);
     main.querySelector('#tlNext').onclick = () => shift(step);
     main.querySelector('#tlToday').onclick = () => { P.rangeStart = todayStart(P.period); S.savePrefs(); renderMain(); flash(); };
-    main.querySelector('#tlPeriod').onclick = (e) => UI.menu(e.currentTarget, PERIODS.map(([n, l]) => ({ label: l, on: P.period === n, onClick: () => setPeriod(n) })));
     main.querySelector('#tlCal').onclick = (e) => calendarPop(e.currentTarget, P.rangeStart, (d) => { P.rangeStart = D.add(D.monday(d), -7 * (P.period >= 52 ? 13 : 1)); S.savePrefs(); renderMain(); flash(); });
     main.querySelector('#tlExpand').onclick = () => {
       const open = anyOpen(groups);
@@ -402,8 +398,8 @@
         <div class="field"><label>Time period</label>
           <select class="select" id="ppPeriod" ${P.view !== 'timeline' ? 'disabled' : ''}>${PERIODS.map(([n, l]) => `<option value="${n}" ${P.period === n ? 'selected' : ''}>${l}</option>`).join('')}</select>
           ${P.view !== 'timeline' ? '<span class="hint">Applies to the timeline view</span>' : ''}</div>
-        <label class="switch"><input type="checkbox" id="ppCompleted" ${P.showCompleted ? 'checked' : ''}><span>Completed</span></label>
-        <div class="cap" style="margin-top:-12px">Show completed working packages and shipments</div>
+        <div class="pp-box"><label class="switch"><input type="checkbox" id="ppCompleted" ${P.showCompleted ? 'checked' : ''}><span>Completed</span></label>
+          <div class="cap">Show completed working packages and shipments</div></div>
         <div class="field"><label>Visible columns</label>
           <div class="acc" id="ppAcc"><button class="acc-h">Columns${ms('expand_less')}</button>
             <div class="acc-b">

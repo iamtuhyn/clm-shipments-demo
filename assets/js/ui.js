@@ -16,15 +16,15 @@
   const dt = (iso) => { if (!iso) return ''; const [d, t] = iso.split('T'); return `${D.fmt(d)}${t ? ', ' + t : ''}`; };
   const isDark = (hex) => ['#F2CA27', '#C4C27A', '#71C68D', '#A09FB5', '#9E9EA7'].includes(hex);
 
-  function wpPill(st) { const w = WP_STATUS[st]; return w ? `<span class="pill ${w.tone}">${w.label}</span>` : ''; }
+  function wpPill(st) { const w = WP_STATUS[st]; return w ? `<span class="pill wp-${st}">${w.label}</span>` : ''; }
   function wpIcon(st, size = 16) { const w = WP_STATUS[st]; return w ? `<span data-tip="Working package: ${w.label}">${ci(w.icon, size)}</span>` : ''; }
   function shipPill(status) {
     const s = SHIPMENT_STATUS[status] || SHIPMENT_STATUS.Open;
-    return `<span class="spill ${isDark(s.color) ? 'dark-t' : ''}" style="background:${s.color}">${ci(s.icon, 14)}${esc(status)}</span>`;
+    return `<span class="spill" style="background:${s.bg};color:${s.fg}">${ci(s.icon, 14)}${esc(s.label)}</span>`;
   }
   function shipIcon(status, size = 26) {
     const s = SHIPMENT_STATUS[status] || SHIPMENT_STATUS.Open;
-    return `<span class="s-ic" style="background:${s.color};width:${size}px;height:${size}px;color:${isDark(s.color) ? 'rgba(0,0,0,.75)' : '#fff'}" data-tip="${esc(status)}">${ci(s.icon, Math.round(size * 0.58))}</span>`;
+    return `<span class="s-ic" style="background:${s.bg};width:${size}px;height:${size}px;color:${s.fg}" data-tip="${esc(s.label)}">${ci(s.icon, Math.round(size * 0.58))}</span>`;
   }
   function tradeColor(t) { return (TRADES[t] || { color: '#969300' }).color; }
   function tradeDark(t) { return !!(TRADES[t] || {}).dark; }
@@ -185,7 +185,7 @@
           <span data-tip="Open"><img src="assets/fig/wp-open.svg" alt="">${c.open || 0}</span>
           <span data-tip="Approved / in progress"><img src="assets/fig/wp-approved.svg" alt="">${c.approved || 0}</span>
           <span data-tip="Completed"><img src="assets/fig/wp-completed.svg" alt="">${c.completed || 0}</span>
-          <span data-tip="Draft / canceled"><img src="assets/fig/wp-draft.svg" alt="">${c.draft || 0}</span>
+          <span data-tip="Draft / canceled"><img src="assets/fig/chip-draft.svg" alt="">${c.draft || 0}</span>
         </div>
       </div></div>`;
   }

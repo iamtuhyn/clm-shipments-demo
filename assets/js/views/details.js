@@ -17,7 +17,7 @@
         <div class="page-head" style="padding-bottom:6px">
           <button class="back" id="dBack" data-tip="Back">${ms('arrow_back')}</button>
           <div class="grow">
-            <div class="row" style="gap:10px"><h1 class="ell">${esc(s.name)}</h1><span class="pill ${{ neutral: '', olive: 'olive', success: 'success', blue: 'inactive', error: 'error', inactive: 'inactive' }[SHIPMENT_STATUS[s.status].tone]}">${esc(s.status)}</span></div>
+            <div class="row" style="gap:10px"><h1 class="ell">${esc(s.name)}</h1>${UI.shipPill(s.status)}</div>
             <div class="meta"><span>${ms('tag')}${esc(s.no)}</span><span>${ms('person')}Created ${UI.dt(s.created)} by ${esc(cr.name)}</span><span>${ms('location_on')}${esc(s.building)} · ${esc(s.floor)} · ${esc(s.zone)}</span><span>${ms('folder')}<a href="#/group/wp/${wp.id}">${esc(wp.title)}</a></span></div>
           </div>
           <button class="btn text" id="dPrint">${ms('print')}Print</button>
@@ -117,7 +117,7 @@
     const contact = (role, id) => { if (!id) return ''; const p = S.person(id); return `<div class="contact"><div class="overline">${role}</div><div class="person"><span class="av">${ms('person')}</span><div class="grow"><b>${esc(p.name)}</b><div class="cap">${esc(p.phone || '')}</div><div class="cap">${esc(p.email || '')}</div></div></div></div>`; };
     return `<div class="rp-head"><h3>Details</h3><div class="rp-name">${esc(s.name)}</div>
         <div class="status-btn ${isDark(st.color) ? 'dark-t' : ''}">
-          <div class="sb-main" style="background:${st.color}">${ci(st.icon, 20)}${esc(s.status)}</div>
+          <div class="sb-main" style="background:${st.color};color:${UI.isDark(st.color) ? 'rgba(0,0,0,.8)' : '#fff'}">${ci(st.icon, 20)}${esc(st.label)}</div>
           <button class="sb-dd" id="dStatus" style="background:${st.color};${!STATUS_FLOW[s.status].length ? 'opacity:.5;cursor:not-allowed' : ''}" data-tip="Change status" ${!STATUS_FLOW[s.status].length ? 'disabled' : ''}>${ms('expand_more')}</button>
         </div></div>
       <div class="rp-body">
@@ -151,7 +151,6 @@
     view.querySelector('#dManage').onclick = (e) => UI.menu(e.currentTarget, [
       { label: 'Edit shipment', icon: 'edit', disabled: ['Completed', 'Canceled'].includes(s.status), onClick: () => CREATE.start({ edit: s.id }) },
       { label: 'Duplicate shipment', icon: 'content_copy', onClick: () => CREATE.start({ duplicate: s.id }) },
-      { label: 'Save as template', icon: 'bookmark_add', onClick: () => saveTemplate() },
       { label: 'Print', icon: 'print', onClick: () => window.print() },
       { sep: true },
       { label: 'Cancel shipment', icon: 'block', danger: true, disabled: ['Completed', 'Canceled'].includes(s.status), onClick: () => cancel(s, () => rerender()) },
@@ -206,17 +205,9 @@
       } }] });
   }
 
-  function saveTemplate() {
-    UI.modal({ title: 'Save as template', icon: 'bookmark_add', size: 'sm', body: `<div class="field"><label>Template name *</label><input class="input" id="tplName" value="${esc(S.material(s.materials[0].id).name)} delivery"></div><p class="cap" style="margin-top:8px">Vehicle, materials and equipment are saved. Date and time slot are chosen when you use it.</p>`,
-      actions: [{ label: 'Cancel', text: true }, { label: 'Save template', primary: true, onClick: (c, sc) => {
-        const n = sc.querySelector('#tplName').value.trim(); if (!n) return false;
-        (S.data.templates = S.data.templates || []).push({ id: 'ut' + Date.now(), name: n, desc: `${S.vehicle(s.vehicle).name} · ${S.material(s.materials[0].id).name}`, vehicle: s.vehicle, materials: s.materials, equipment: s.equipment, used: 0 });
-        S.persist(); UI.toast(`Template “${esc(n)}” saved`);
-      } }] });
-  }
 
   // Status dropdown — CLM Figma 38326:78434: full width of the status button, grey items, olive on hover
-  const SM = { Open: ['legend-open', 'Reopen'], Approved: ['sm-approved', 'Approved'], Waiting: ['sm-waiting', 'Waiting'], 'In Transit': ['sm-intransit', 'In transit'], Arrived: ['sm-arrived', 'Arrived'], Unloading: ['sm-arrived', 'Arrived and Unloading'], Completed: ['sm-completed', 'Completed'], Rejected: ['sm-rejected', 'Rejected'], Canceled: ['sm-canceled', 'Cancel shipment'] };
+  const SM = { Open: ['legend-open', 'Reopen'], Approved: ['sm-approved', 'Approved'], Waiting: ['sm-waiting', 'Waiting'], 'In Transit': ['sm-intransit', 'In transit'], 'Arrived & Unloading': ['sm-arrived', 'Arrived & Unloading'], Completed: ['sm-completed', 'Completed'], Rejected: ['sm-rejected', 'Rejected'], Canceled: ['sm-canceled', 'Cancel shipment'] };
   function statusMenu(anchor) {
     const btn = anchor.closest('.status-btn');
     const next = STATUS_FLOW[s.status].slice();

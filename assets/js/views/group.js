@@ -5,10 +5,10 @@
   const { D, WP_STATUS } = CLM;
   const { esc, ms, hl, tradeColor, tradeDark } = UI;
   const BUCKETS = [
-    { k: 'open', label: 'Open', tone: 'grey', icon: 'lg-open', test: (s) => s.status === 'Open' },
-    { k: 'approved', label: 'Approved', tone: 'olive', icon: 'lg-approved', test: (s) => !['Open', 'Completed', 'Canceled', 'Rejected'].includes(s.status) },
+    { k: 'open', label: 'Open', tone: 'grey', icon: 'chip-open', test: (s) => s.status === 'Open' },
+    { k: 'approved', label: 'Approved', tone: 'olive', icon: 'f-approved', test: (s) => !['Open', 'Completed', 'Canceled', 'Rejected'].includes(s.status) },
     { k: 'completed', label: 'Completed', tone: 'blue', icon: 'lg-completed', test: (s) => s.status === 'Completed' },
-    { k: 'canceled', label: 'Draft', tone: 'red', icon: null, test: (s) => ['Canceled', 'Rejected'].includes(s.status) },
+    { k: 'canceled', label: 'Draft', tone: 'red', icon: 'chip-draft', test: (s) => ['Canceled', 'Rejected'].includes(s.status) },
   ];
   const STATUS_TXT = { overdue: ['warning', 'var(--color-status-error-fg)'], active: ['fiber_manual_record', 'var(--color-status-success-fg)'], pending: ['schedule', 'var(--color-raisin-300)'], completed: ['library_add_check', 'var(--color-data-12)'] };
   let st = null;
@@ -34,7 +34,7 @@
     const done = counts.completed; const pct = all.length ? Math.round((done / all.length) * 100) : 0;
     const accent = wp ? tradeColor(wp.trade) : 'var(--color-action-primary)';
     const icon = { wp: 'folder', destination: 'location_on', sender: 'outbox', recipient: 'move_to_inbox' }[by];
-    const statusChip = wp ? `<span class="pill ${{ overdue: 'error', active: 'success', pending: 'warning', completed: 'inactive' }[status]}">${WP_STATUS[status].label}</span>` : `<span class="pill">${S.groupLabel(by)}</span>`;
+    const statusChip = wp ? UI.wpPill(status) : `<span class="pill">${S.groupLabel(by)}</span>`;
 
     view.innerHTML = `
     <div class="page gpage">
@@ -63,7 +63,7 @@
       const list = all.filter(pass);
       const chips = view.querySelector('#gChips');
       const shown = BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled);
-      chips.innerHTML = UI.checkChip({ key: '', label: 'All', count: all.length, checked: !st.on.length, tone: 'olive' }) + BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).map((b) => UI.checkChip({ key: b.k, label: b.label, count: counts[b.k], checked: st.on.includes(b.k), tone: b.tone, icon: b.icon ? UI.img(b.icon) : `<span class="ci" style="width:20px;height:20px;color:var(--color-status-error-fg)">${CLM_ICONS['sm-canceled']}</span>` })).join('');
+      chips.innerHTML = UI.checkChip({ key: '', label: 'All', count: all.length, checked: !st.on.length, tone: 'olive' }) + BUCKETS.filter((b) => b.k !== 'canceled' || counts.canceled).map((b) => UI.checkChip({ key: b.k, label: b.label, count: counts[b.k], checked: st.on.includes(b.k), tone: b.tone, icon: UI.img(b.icon) })).join('');
       chips.querySelectorAll('[data-cc]').forEach((c) => c.onclick = () => { const k = c.dataset.cc; st.on = !k ? [] : st.on.includes(k) ? st.on.filter((x) => x !== k) : st.on.concat(k); if (st.on.length === shown.length) st.on = []; draw(); });
       view.querySelector('#gBody').innerHTML = !all.length ? emptyHtml(wp, status, 'No shipments in this working package yet.')
         : !list.length ? emptyHtml(null, null, 'No shipments match the selected status.')
