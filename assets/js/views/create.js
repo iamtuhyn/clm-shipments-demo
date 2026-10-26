@@ -66,8 +66,8 @@
         <div><i class="ms">apartment</i><span>Building</span><em>${esc(s.building)}</em></div>
         <div><i class="ms">layers</i><span>Floor</span><em>${esc(s.floor)}</em></div>
       </div>
-      <div class="hc-by"><span class="hc-av">${UI.initials(by.name)}</span><span class="ell">by ${esc(by.name)} · ${D.fmt(s.created.slice(0, 10))}</span></div>
-      <div class="hc-a"><button class="btn text sm" data-prev="${s.id}">${ms('visibility')}Preview</button><button class="btn text sm" data-use="${s.id}">${ms('content_copy')}Duplicate</button></div>
+      <div class="hc-by"><span class="hc-av">${UI.initials(by.name)}</span><span class="grow" style="min-width:0"><b class="ell">${esc(by.name)}</b><small>Created ${D.fmt(s.created.slice(0, 10))}</small></span></div>
+      <button class="hc-dup" data-use="${s.id}">${ms('content_copy')}Duplicate</button>
     </div>`; };
     const list = () => { const l = SRC[src].list; return `${l.length ? `<div class="hcards">${l.slice(0, all ? 12 : 3).map(card).join('')}</div>` : '<div class="cap" style="padding:8px 0">No shipments yet</div>'}
       ${l.length > 3 ? `<button class="hs-all" data-all>${all ? 'Show less' : `See all ${SRC[src].label.toLowerCase().replace(/^from /, '')}`}</button>` : ''}`; };
@@ -80,7 +80,7 @@
       </div>
       <div class="hs-hist">
         <div class="hs-h"><b>Start from a previous shipment</b><p>Copy the details of a shipment you or your team created. You pick a new date and time slot.</p></div>
-        <div class="hs-pills">${Object.entries(SRC).map(([k, o]) => `<button class="hs-pill ${k === src ? 'on' : ''}" data-src="${k}">${o.label}</button>`).join('')}</div>
+        <div class="hs-pills">${Object.entries(SRC).map(([k, o]) => `<button class="cchip olive ${k === src ? 'on' : ''}" data-src="${k}">${o.label}</button>`).join('')}</div>
         <div id="hsList">${list()}</div>
       </div>`,
       onMount: (el, close) => {
@@ -92,7 +92,6 @@
           if (t.closest('[data-new]')) { d = blank(); return start(); }
           const sp = t.closest('[data-src]'); if (sp) { src = sp.dataset.src; all = false; el.querySelectorAll('[data-src]').forEach((x) => x.classList.toggle('on', x === sp)); el.querySelector('#hsList').innerHTML = list(); return; }
           if (t.closest('[data-all]')) { all = !all; el.querySelector('#hsList').innerHTML = list(); return; }
-          const pv = t.closest('[data-prev]'); if (pv) { close(); return UI.go('#/shipment/' + pv.dataset.prev); }
           const u = t.closest('[data-use]'); if (u) { const s = S.shipment(u.dataset.use); d = fromShipment(s, blank()); d.name = s.name + ' (copy)'; return start(); }
         });
       } });
