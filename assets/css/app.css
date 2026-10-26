@@ -325,7 +325,7 @@ textarea.input { height: auto; min-height: 96px; padding: 8px 12px; resize: vert
 .dlg-b { padding: 12px 24px 0; overflow: auto; font-size: 16px; line-height: 22px; letter-spacing: 0; }
 .dlg-b > p, .dlg-b > .muted { color: var(--t2); }
 .dlg-b .field, .dlg-b .check, .dlg-b .grid2, .dlg-b .grid3, .dlg-b .chips, .dlg-b .doc, .dlg-b .stile { font-size: 14px; line-height: 18px; letter-spacing: .5px; }
-.dlg-f { display: flex; align-items: center; gap: 8px; padding: 24px 12px 12px 24px; justify-content: flex-end; }
+.dlg-f { display: flex; align-items: center; gap: 8px; padding: 24px; justify-content: flex-end; }
 .dlg-f .left { margin-right: auto; }
 .dlg-icon { display: none; }
 
@@ -736,11 +736,11 @@ mark { background: #FFEECC; color: inherit; border-radius: 2px; padding: 0 1px; 
 .cchip { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 12px; border-radius: var(--radius-small); border: 1px solid var(--border); background: #fff; font-size: 14px; font-weight: 500; letter-spacing: .1px; white-space: nowrap; transition: background .12s, border-color .12s; }
 .cchip:hover { background: var(--color-action-outline-hover); }
 .cchip img, .cchip .ci { display: block; flex: none; }
-.cchip.grey { color: #939399; } .cchip.grey.on { background: #F7F7F7; border-color: #F7F7F7; }
-.cchip.olive { color: var(--color-action-primary); } .cchip.olive.on { background: var(--color-surface-selected); border-color: var(--color-surface-selected); }
-.cchip.blue { color: var(--color-data-12); } .cchip.blue.on { background: rgba(46,96,170,.2); border-color: transparent; }
-.cchip.red { color: var(--color-status-error-fg); } .cchip.red.on { background: #FBEDEB; border-color: #FBEDEB; }
-.cchip.green { color: #2F7D52; } .cchip.green.on { background: #E6F4EC; border-color: #E6F4EC; }
+.cchip.grey { color: #939399; } .cchip.grey.on { background: #F7F7F7; border-color: #474752; color: #474752; }
+.cchip.olive { color: var(--color-action-primary); } .cchip.olive.on { background: var(--color-surface-selected); border-color: var(--color-olive-700); color: var(--color-olive-700); }
+.cchip.blue { color: var(--color-data-12); } .cchip.blue.on { background: rgba(46,96,170,.2); border-color: #1E3F8A; color: #1E3F8A; }
+.cchip.red { color: var(--color-status-error-fg); } .cchip.red.on { background: #FBEDEB; border-color: #8A1500; color: #8A1500; }
+.cchip.green { color: #2F7D52; } .cchip.green.on { background: #E6F4EC; border-color: #1E5A3A; color: #1E5A3A; }
 .chips { gap: 12px; }
 
 /* ---------------- view switcher (attachment design) ---------------- */

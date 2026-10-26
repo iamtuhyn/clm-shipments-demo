@@ -54,12 +54,13 @@
     let saved = null; try { saved = JSON.parse(localStorage.getItem('clm-shipment-draft') || 'null'); } catch (e) {}
     UI.modal({ title: 'Create shipment', sub: 'Start from scratch or reuse what you send often.', size: 'wide', body: `
       ${saved ? `<div class="banner info" style="margin-bottom:14px" id="smDraft">${ms('edit_document')}<div class="grow"><b>Continue your draft?</b><p>${esc(saved.name || 'Untitled shipment')} · step ${saved.step} of 6 · ${STEPS[saved.step - 1]}</p></div><button class="btn text sm" data-draft-x>Discard</button><button class="btn sm primary" data-draft-go>Continue draft</button></div>` : ''}
-      <div class="sel-grid" style="grid-template-columns:repeat(3,1fr)" id="smGrid">
+      <div class="sel-grid" style="grid-template-columns:repeat(3,1fr)">
         <div class="stile on" data-c="blank" style="min-height:104px">${ms('note_add', 's24')}<b>Start from scratch</b><small>Empty shipment, 5 short steps</small></div>
-        ${tpls.map((t) => `<div class="stile" data-c="tpl:${t.id}" style="min-height:104px">${ci(S.vehicle(t.vehicle).icon, 52, 'height:26px')}<b>${esc(t.name)}</b><small>${esc(t.desc)}</small><span class="pill">Template · used ${t.used}×</span></div>`).join('')}
       </div>
-      <div class="section-label" style="margin-top:18px">Or duplicate one of your recent shipments</div>
-      ${recent.map((s) => `<div class="doc" data-c="dup:${s.id}" style="cursor:pointer">${HUB_legendShipIcon(s.status, 18)}<div class="grow"><b style="font-weight:500">${esc(s.name)}</b><div class="cap">${esc(s.no)} · ${D.fmt(s.date)} · ${esc(S.vehicle(s.vehicle).name)}</div></div><span class="faint">${ms('radio_button_unchecked')}</span></div>`).join('')}`,
+      <div class="section-label" style="margin:18px 0 8px">Or duplicate one of your recent shipments</div>
+      <div class="sel-grid" style="grid-template-columns:repeat(3,1fr)">
+        ${tpls.map((t) => `<div class="stile" data-c="tpl:${t.id}" style="min-height:104px">${ci(S.vehicle(t.vehicle).icon, 52, 'height:26px')}<b>${esc(t.name)}</b><small>${esc(t.desc)}</small></div>`).join('')}
+      </div>`,
       onMount: (el, close) => {
         el.querySelector('[data-draft-go]')?.addEventListener('click', () => { d = saved; d.dirty = true; close(); UI.go('#/create'); });
         el.querySelector('[data-draft-x]')?.addEventListener('click', () => { try { localStorage.removeItem('clm-shipment-draft'); } catch (e) {} el.querySelector('#smDraft').remove(); });
