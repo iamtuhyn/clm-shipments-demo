@@ -36,8 +36,14 @@
     draw(); el.querySelector('#ssQ').oninput = (ev) => draw(ev.target.value); setTimeout(() => el.querySelector('#ssQ').focus(), 30);
     el.onclick = (ev) => { const b = ev.target.closest('[data-site]'); if (!b) return; UI.closeFloat(); if (b.dataset.site !== CURRENT) UI.toast(`Only <b>${esc(CURRENT)}</b> has demo data. Other sites are not part of this demo.`, { icon: 'info' }); };
   };
-  document.getElementById('langBtn').onclick = (e) => UI.menu(e.currentTarget, [['EN', 'English'], ['DE', 'Deutsch'], ['FR', 'Français'], ['IT', 'Italiano']].map(([c, l], i) => ({
-    label: l, hint: c, on: i === 0, onClick: () => { if (i) UI.toast('Translations are not part of this demo.', { icon: 'translate' }); },
+  // language: short code + flag, English / German / French only
+  const FLAGS = {
+    EN: '<svg viewBox="0 0 60 30" width="24" height="12"><clipPath id="fgb"><path d="M0 0v30h60V0z"/></clipPath><clipPath id="fgt"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><g clip-path="url(#fgb)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#fgt)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>',
+    DE: '<svg viewBox="0 0 5 3" width="20" height="12"><path fill="#000" d="M0 0h5v1H0z"/><path fill="#D00" d="M0 1h5v1H0z"/><path fill="#FFCE00" d="M0 2h5v1H0z"/></svg>',
+    FR: '<svg viewBox="0 0 3 2" width="18" height="12"><path fill="#002395" d="M0 0h1v2H0z"/><path fill="#fff" d="M1 0h1v2H1z"/><path fill="#ED2939" d="M2 0h1v2H2z"/></svg>',
+  };
+  document.getElementById('langBtn').onclick = (e) => UI.menu(e.currentTarget, ['EN', 'DE', 'FR'].map((c, i) => ({
+    label: c, ci: `<span class="flag">${FLAGS[c]}</span>`, on: i === 0, onClick: () => { if (i) UI.toast('Translations are not part of this demo.', { icon: 'translate' }); },
   })), { align: 'right' });
   document.getElementById('bellBtn').onclick = (e) => {
     const list = S.data.NOTIFICATIONS;

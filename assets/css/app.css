@@ -821,3 +821,6 @@ select.select-native { display: none !important; }
 .hs-all { align-self: flex-start; color: var(--olive-600); font-size: 14px; font-weight: 500; padding: 4px 6px; margin-left: -6px; border-radius: var(--radius-small); }
 .hs-all:hover { background: var(--color-action-outline-hover); }
 .dialog .dlg-b:last-child { padding-bottom: 24px; }
+
+.menu .flag { width: 24px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.menu .flag svg { display: block; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
